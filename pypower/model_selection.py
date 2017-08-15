@@ -4,6 +4,7 @@ This module is for evaluating model perfomance
 
 # import packages
 import sys
+import multiprocessing
 import traceback
 import random
 from datetime import datetime, date, time, timedelta
@@ -13,7 +14,7 @@ import itertools
 import re
 from random import randint, sample
 from pypower import prediction_models as pred
-from pypower import utils as ut
+from pypower import data_utils as ut
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier
 from sklearn.model_selection import train_test_split
@@ -22,44 +23,7 @@ from pypower import preprocessing as prep
 import matplotlib.pylab as plt
 
 
-def evaluate_out_of_the_box_models(model_list=None, data='df', features=None,
-                                   target='event_type_num', output_dir=None):
-    """
-    Evaluates out of the box models and picks the best model based on accuracy
-    using k-fold.
-    :param model_list: dict-A list of models to try
-    :param df: The data to test
-    :param features:
-    :param target: The variable to predict
-    :return: A dict object with model name and accuracy
-    """
-    X = data[features].values
-    y = data[target].values
-
-    results = {}
-
-    for nm, clf in model_list.items():
-        # print ('Working on ...%s' %nm)
-
-        scores = cross_val_score(clf, X, y, cv=5)
-        results[nm] = scores
-
-        # Feature importance
-        if nm != 'LR':
-            clf.fit(X, y)
-            feat_imp = pd.Series(clf.feature_importances_, features).sort_values(ascending=False)
-            # print(feat_imp)
-            feat_imp.plot(kind='bar')
-            plt.ylabel('Feature Importance Score')
-            figure = plt.gcf()  # get current figure
-            figure.set_size_inches(10, 10)
-            plot_file_name = output_dir + nm + '_feat_imp.png'
-            figure.savefig(plot_file_name)
-
-    return results
-
-
-def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=True):
+def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=True, sample_thres=500000):
     """
     Validates out of the box models such as random forest.
     :param df:
@@ -78,7 +42,11 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
     num_missing = len(df[df.event_type_str == 'missing'])
     print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
     print('Discarding missing events...we dont need them for validation...')
+
     df = df[df.event_type_str != 'missing']
+
+    if df.shape[0] > sample_thres:
+        df = df.sample(frac=0.30)
 
     # whether to use inserted events or only observed_events
     if not inserted:
@@ -91,12 +59,9 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
 
     # Define models
     random_state = 1
-    clfs = {'LR': LogisticRegression(penalty='l1', max_iter=10),
-            'RF': RandomForestClassifier(n_estimators=10, n_jobs=-1,
-                                         random_state=random_state),
-            'GBM': GradientBoostingClassifier(n_estimators=10,
-                                              random_state=random_state),
-            'ETC': ExtraTreesClassifier(n_estimators=10, n_jobs=-1, criterion='gini')
+    clfs = {# 'RF': RandomForestClassifier(n_estimators=350, n_jobs=-1,
+            #                           random_state=random_state),
+            'ETC': ExtraTreesClassifier(n_estimators=350, n_jobs=-1, criterion='gini')
             }
 
     # finally eveluate
@@ -118,15 +83,51 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
     df.to_csv(results_dir + 'out_of_the_box_model_eval_res.csv', index=False)
 
 
+def evaluate_out_of_the_box_models(model_list=None, data='df', features=None,
+                                   target='event_type_num', output_dir=None):
+    """
+    Evaluates out of the box models and picks the best model based on accuracy
+    using k-fold.
+    :param model_list: dict-A list of models to try
+    :param df: The data to test
+    :param features:
+    :param target: The variable to predict
+    :return: A dict object with model name and accuracy
+    """
+    X = data[features].values
+    y = data[target].values
+
+    results = {}
+
+    for nm, clf in model_list.items():
+        print ('Working on ...%s' %nm)
+
+        scores = cross_val_score(clf, X, y, cv=3)
+        results[nm] = scores
+
+        # Feature importance
+        if nm != 'LR':
+            clf.fit(X, y)
+            feat_imp = pd.Series(clf.feature_importances_, features).sort_values(ascending=False)
+            # print(feat_imp)
+            feat_imp.plot(kind='bar')
+            plt.ylabel('Feature Importance Score')
+            figure = plt.gcf()  # get current figure
+            figure.set_size_inches(10, 10)
+            plot_file_name = output_dir + nm + '_feat_imp.png'
+            figure.savefig(plot_file_name)
+
+    return results
+
+
 def batch_evaluation_imputation_nearest_neighbor(file_sms_v2=None, box_metadata_file=None,
                                                  model_params=None, eval_params=None):
-    '''
+    """
     This just evaluates the nearest box predictor with a temporal window
     :param df:
     :param use_random:
     :return: a list with accuracy for each PSU
-    '''
-
+    """
     # read in the data
     cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'hour_sent', 'event_type_str']
 
@@ -138,18 +139,27 @@ def batch_evaluation_imputation_nearest_neighbor(file_sms_v2=None, box_metadata_
 
     # list of all boxes
     box_list = list(df.box_id.unique())
-    random_boxes =random.sample(box_list, eval_params['num_boxes']) # select only a few boxes
+    random_boxes = random.sample(box_list, eval_params['num_boxes']) # select only a few boxes
 
     # dict object to hold all results
     acc_all = {}
 
     i = 0
     for bx in random_boxes:
-        if i % 10 == 0:
-            print('{} boxes processed....'.format(i))
-
         try:
-            results = evaluate_imputation_nearest_neighbor_model(all_data=df, test_box_id=bx,
+            # preselect data based on box location
+            bx_df = df[df.box_id == bx]
+
+            box_xy = [bx_df['lat'].iloc[0], bx_df['lon'].iloc[0]]
+            neighbors = ut.k_nearest_boxes(box_metadata_file=box_metadata_file, box_id=bx, box_lat_lon=box_xy, k=10)
+            neighbors.append(bx)
+
+            df_bx = df[df['box_id'].isin(neighbors)]
+
+            if i % 10 == 0:
+                print('{} boxes processed....'.format(i))
+
+            results = evaluate_imputation_nearest_neighbor_model(all_data=df_bx, test_box_id=bx,
                                                                  prop_test=eval_params['num_tests'],
                                                                  min_test_cases=eval_params['min_cases'],
                                                                  max_test_cases=eval_params['min_cases'],
@@ -161,7 +171,7 @@ def batch_evaluation_imputation_nearest_neighbor(file_sms_v2=None, box_metadata_
         except Exception as e:
             desired_trace = traceback.format_exc(sys.exc_info())
             print(desired_trace)
-            pass
+            continue
 
     return acc_all
 
@@ -279,7 +289,7 @@ def param_selection_imputation_nearest_neigbor_model(results=None, output_file =
     return df
 
 
-def evaluate_nearest_neighbor(configs=None):
+def evaluate_nearest_neighbor(configs=None, debug_mode=False):
     """
     Simply budnles togather the code for completely evaluating NN
     :return:
@@ -291,13 +301,18 @@ def evaluate_nearest_neighbor(configs=None):
     output_dir = configs.get_outputs_dir()
 
     # ----------- EVALUATE IMPUTATION-NEAREST NEIGHBOR----------
-    neighbors = [0, 1]
-    window = [7]
+    neighbors = [0, 1, 3]
+    window = [7, 14]
     window_neighbor_comb = [x for x in itertools.product(window, neighbors)]
 
     # parameter settings
     params_model = {'neighbors': 1, 'time-window': 7, 'direction': 'both', 'how': 'frequent'}
-    params_eval = {'num_tests': 0.01, 'min_cases': 10, 'max_cases': 50, 'num_boxes': 10}  # hold out 10 percent of the data
+
+    num_boxes = 100
+    if debug_mode:
+        num_boxes = 50
+
+    params_eval = {'num_tests': 0.01, 'min_cases': 10, 'max_cases': 50, 'num_boxes': num_boxes}  # hold out 10 percent of the data
 
     all_res = {}
 
@@ -323,13 +338,15 @@ def evaluate_nearest_neighbor(configs=None):
 
 
 if __name__ == "__main__":
+    multiprocessing.set_start_method('forkserver', force=True)
     # ----------SET UP-----------------------------------------
     config = prep.Configurations(platform='mac')
+    config.debug_mode = False
 
     # -----------EVALUATE OUT OF THE BOX MODELS----------------
     batch_evaluation_of_the_box_models(config_obj=config, pooled=False, inserted=True)
 
     # -----------EVALUATE NEAREST NEIGHBOR----------------------
-    evaluate_nearest_neighbor(configs=config)
+    #evaluate_nearest_neighbor(configs=config, debug_mode=config.debug_mode)
 
 

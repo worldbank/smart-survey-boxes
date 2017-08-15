@@ -2,7 +2,7 @@
 Automated tests to make debugging easy
 """
 
-from pypower import utils as ut
+from pypower import data_utils as ut
 from datetime import datetime
 import unittest
 

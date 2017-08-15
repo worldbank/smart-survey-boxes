@@ -4,7 +4,7 @@ For making out of sample predictions and imputations
 
 # import packages
 from datetime import datetime, date, time, timedelta
-from math import radians, cos, sin, atan2, sqrt
+from pypower import data_utils as ut
 import pandas as pd
 import numpy as np
 import itertools
@@ -66,29 +66,6 @@ class ImputationNearestNeighbor:
 
         return train_data2
 
-    def calculate_distance(self, pt1, pt2):
-        """
-        Computes distance between two geographic coordinates
-        :param pt1: [Lat,Lon] for first point
-        :param pt2: [Lat,Lon] for second
-        :returns distance in km between the two points
-        """
-        # Radius of the earth in km (Hayford-Ellipsoid)
-        EARTH_RADIUS = 6378388 / 1000
-
-        d_lat = radians(pt1[0] - pt2[0])
-        d_lon = radians(pt1[1] - pt2[1])
-
-        lat1 = radians(pt1[0])
-        lat2 = radians(pt2[0])
-
-        a = sin(d_lat / 2) * sin(d_lat / 2) + \
-            sin(d_lon / 2) * sin(d_lon / 2) * cos(lat1) * cos(lat2)
-
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        return c * EARTH_RADIUS
-
     def generate_event_freqs(self, df=None, by_box=False, cond=None):
         """
         Returns a dictionary object of frequency of each event by the hour.
@@ -124,7 +101,7 @@ class ImputationNearestNeighbor:
         bx = self.BOX_METADATA[self.BOX_METADATA.box_id != box_id]
         bx.is_copy = False
 
-        bx['dist'] = bx.apply(lambda row: self.calculate_distance([row['lat'], row['lon']],
+        bx['dist'] = bx.apply(lambda row: ut.calculate_distance([row['lat'], row['lon']],
                                                                               target_loc), axis=1)
 
         nearest_n = bx.sort_values(by=['dist'], ascending=True)[:self.neighbors]

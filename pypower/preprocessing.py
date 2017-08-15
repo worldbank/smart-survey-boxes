@@ -2,18 +2,17 @@
 This is where we do the actual data preprocessing including imputation
 '''
 
-import os, sys
+import sys
 import traceback
-import multiprocessing
 from datetime import datetime
-import time
+
 import pandas as pd
-import numpy as np
-from pypower import utils as ut
-from pypower import model_selection as mod_ev
-from pypower import prediction_models as pred
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier
+from sklearn.externals import joblib
 from sklearn.linear_model import LogisticRegression
+
+from pypower import data_utils as ut
+from pypower import prediction_models as pred
 
 
 class Configurations:
@@ -36,9 +35,10 @@ class Configurations:
     MAC_DATA_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/"
     MAC_RAW_SMS_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/raw_sms/"
     MAC_PROCESSED_SMS_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/processed_sms/"
+    MAC_MODEL_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/imputation_models/"
     MAC_OUTPUTS_DIR = "/Users/dmatekenya/PycharmProjects/power-mon/outputs/"
 
-    def __init__(self,platform='mac', imputation_approach = 'nn', debug_mode=True):
+    def __init__(self,platform='mac', imputation_approach='etc', debug_mode=True):
         self.platform = platform
         self.data_dir = None
         self.output_dir = None
@@ -69,6 +69,12 @@ class Configurations:
         elif self.platform == 'bank_windows':
             return self.WINDOWS_OUTPUT_DIR
 
+    def get_model_dir(self):
+        if self.platform == 'mac':
+            return self.MAC_MODEL_DIR
+        elif self.platform == 'bank_windows':
+            return self.WINDOWS_MODEL_DIR
+
 
 def impute_with_universal_model(config_obj='config',how='nn'):
     """
@@ -79,13 +85,13 @@ def impute_with_universal_model(config_obj='config',how='nn'):
     :return:
     """
     box_file = config_obj.get_data_dir() + 'Boxes.csv'
-    file_sms_v2 = config_obj.get_processed_data_dir() + 'sms_v2.csv'  # file with missing values
+    file_sms_rect_hr = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'  # file with missing values
     file_sms_v3 = config_obj.get_processed_data_dir() + 'sms_v3.csv'  # file after filling missing values
 
     if how == 'nn':
         # --------impute with nearest neighbor--------------------
         nn_params = {'neighbors': 1, 'time-window': 7, 'direction': 'both', 'how': 'frequent'}
-        df_imputed = impute_with_nearest_neighbor(file_sms_v2=file_sms_v2, predictor_params=nn_params, bx_file=box_file)
+        df_imputed = impute_with_nearest_neighbor(file_sms_rect_hr=file_sms_rect_hr, predictor_params=nn_params, bx_file=box_file)
 
         df_imputed.to_csv(file_sms_v3, index=False) # save to file
     elif how == 'out':
@@ -93,14 +99,14 @@ def impute_with_universal_model(config_obj='config',how='nn'):
         model = 'RF'
         prediction_features = ['box_id', 'psu', 'lon', 'lat', 'month_sent', 'wk_day_sent', 'wk_end', 'holiday']
         params = {'trees': 1, 'pred_feat': prediction_features}
-        df_imputed = impute_with_out_of_box_model(file_sms_v2=file_sms_v2, predictor_params=params,
+        df_imputed = impute_with_out_of_box_model(file_sms_rect_hr=file_sms_rect_hr, predictor_params=params,
                                                   model_name=model, target_var='event_type_num')
         df_imputed.to_csv(file_sms_v3, index=False)  # save to file
 
 
-def impute_with_out_of_box_model(file_sms_v2=None, predictor_params=None,target_var='event_type_num', model_name='LR'):
+def impute_with_out_of_box_model(file_sms_rect_hr=None, predictor_params=None,target_var='event_type_num', model_name='LR'):
     """
-    :param file_sms_v2: version 2 of sms data
+    :param file_sms_rect_hr: version 2 of sms data
     :param predictor_params: Parameters for predictors-to be sourced dynamically from file
     :param bx_file: Box metadata
     :return: A Pandas dataframe with missing data filled.
@@ -122,7 +128,7 @@ def impute_with_out_of_box_model(file_sms_v2=None, predictor_params=None,target_
                    'str_datetime_sent_hr', 'hour_sent', 'event_type_str', 'event_type_num',
                    'power_state', 'data_source'] + pred_feat)
 
-    df = pd.read_csv(file_sms_v2, usecols=list(cols_to_use), nrows=10000)
+    df = pd.read_csv(file_sms_rect_hr, usecols=list(cols_to_use), nrows=10000)
 
     train_df = df[df.event_type_num != -1]  # Keep only non-missing values for evaluation
     df_missing = df[df.event_type_num == -1]
@@ -152,9 +158,9 @@ def impute_with_out_of_box_model(file_sms_v2=None, predictor_params=None,target_
     return df
 
 
-def impute_with_nearest_neighbor(file_sms_v2=None, predictor_params = None, bx_file =None):
+def impute_with_nearest_neighbor(file_sms_rect_hr=None, predictor_params = None, bx_file =None):
     """
-    Returns sms_v2 file with missing values filled
+    Returns sms_rect_hr file with missing values filled
     :return:
     """
 
@@ -162,7 +168,7 @@ def impute_with_nearest_neighbor(file_sms_v2=None, predictor_params = None, bx_f
     cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent','data_source',
                    'str_datetime_sent_hr', 'hour_sent', 'event_type_str','event_type_num']
 
-    df = pd.read_csv(file_sms_v2, usecols=cols_to_use, parse_dates=['str_datetime_sent_hr'])
+    df = pd.read_csv(file_sms_rect_hr, usecols=cols_to_use, parse_dates=['str_datetime_sent_hr'])
 
     df.rename(columns={'str_datetime_sent_hr': 'datetime_sent_hr'}, inplace=True)
     train_df = df[df.event_type_str != 'missing']  # Keep only non-missing values for evaluation
@@ -195,9 +201,46 @@ def impute_with_nearest_neighbor(file_sms_v2=None, predictor_params = None, bx_f
     return df
 
 
+def impute_with_etc(config_obj=None, prediction_features=None):
+    """
+    Fill out missing events using scikit-learn Extra Trees Classifier based.
+    :param config_obj:
+    :param prediction_features:
+    :return:
+    """
+    file_sms_rect_hr = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'
+
+    model_file = config_obj.get_model_dir() + 'ETC.pkl'
+
+    file_sms_rect_hr_imp = config_obj.get_processed_data_dir() + 'sms_rect_hr_imp.csv'
+
+    df = pd.read_csv(file_sms_rect_hr)
+
+    df_missing = df[df['event_type_num'] == -1]
+
+    if not prediction_features:
+        prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
+                           'wk_end']
+
+    X = df_missing[prediction_features]
+
+    try:
+        clf = joblib.load(model_file)
+
+        y_predicted = clf.predict(X)
+
+        df.loc[df['event_type_num'] == -1, 'event_type_num'] = y_predicted
+
+        df.to_csv(file_sms_rect_hr_imp, index=False)
+    except Exception as e:
+        print(e)
+
+    print('SUCCESSFULLY IMPUTED WITH ETC')
+
+
 def preprocesss_raw_sms(configuration=None, debugging=True):
     """
-    Takes raw sms.xml and converts it into sms_v1 (observed_events) and sms_v2 (observed + inserted events)
+    Takes raw sms.xml and converts it into sms_observed (observed_events) and sms_rect_hr (observed + inserted events)
     :param configuration: Has details about file locations
     :param debugging: whether to run in debug mode or not
     :return:
@@ -205,46 +248,14 @@ def preprocesss_raw_sms(configuration=None, debugging=True):
     try:
         box_file = configuration.get_data_dir() + 'Boxes.csv'
         xml_file = configuration.get_data_dir() + 'sms.xml'
-        sms_v1 = configuration.get_processed_data_dir() + 'sms_v1.csv'  # filename for sms_v1 based on date
-        sms_v2 = configuration.get_processed_data_dir() + 'sms_v2.csv'  # filename for sms_v2 based on date
+        sms_observed = configuration.get_processed_data_dir() + 'sms_observed.csv'  # filename for sms_observed based on date
+        sms_rect_hr = configuration.get_processed_data_dir() + 'sms_rect_hr.csv'  # filename for sms_rect_hr based on date
 
         start = datetime.now()
-        ut.process_raw_sms(sms_v1_file=sms_v1, sms_v2_file=sms_v2, raw_sms=xml_file, box_details=box_file,
-                           debug_mode=debugging)
+        ut.process_raw_sms(sms_observed_file=sms_observed, sms_rect_hr_file=sms_rect_hr, raw_sms=xml_file,
+                           box_details=box_file,debug_mode=debugging)
         end = datetime.now()
         print('Processing took {} seconds '.format((end - start).total_seconds()))
     except Exception as e:
         desired_trace = traceback.format_exc(sys.exc_info())
         print(desired_trace)
-
-
-def main(impute=False, preprocess=True, config_object=None):
-
-    if impute:
-        # --------IMPUTATIONS------------------------------------------------
-        # TODO assign models specific to each box after doing comprehensive evaluation
-        how_to_impute = config_object.imputation_approach
-
-        # currently using one model for all boxes.....
-        impute_with_universal_model(config_obj=config_object, how=how_to_impute)
-    if preprocess:
-        # ------------PREPROCESS DATA----------------------------------------
-        # Takes raw sms.xml and saves to sms_v1 (only observed events) and sms_v2 (one hour time resolution dataset)
-        debug = config.debug_mode
-        preprocesss_raw_sms(config, debugging=debug)
-
-
-if __name__ == "__main__":
-    multiprocessing.set_start_method('forkserver', force=True)
-
-    # ------------SET UP WORKING DIRECTORY AND FILES--------------------
-    # create config object and set imputation approach to nearest neighbor
-    config = Configurations(platform='mac', imputation_approach='nn', debug_mode=False)
-
-    # -----------PREPROCESS ONLY----------------------------------------
-    main(preprocess=True, impute=False, config_object=config)
-
-
-
-
-

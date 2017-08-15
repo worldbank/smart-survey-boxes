@@ -8,6 +8,7 @@ import sys
 import traceback
 from datetime import datetime, date, time, timedelta
 from collections import OrderedDict, defaultdict
+from math import radians, cos, sin, atan2, sqrt
 
 import pandas as pd
 import numpy as np
@@ -254,12 +255,12 @@ class Box:
         """
         Assign event_type_str for an inserted event
         :param prev_event: Previous event
-        :param time_after_previous_event:
-        :param next_event:
-        :param time_before_next_event:
-        :param  is_missing_threshold_lower:
-        :param is_missing_threshold_upper:
-        :param how:
+        :param time_after_previous_event: Number of hours passed after previous event
+        :param next_event: Next event
+        :param time_before_next_event: Number of hours before next event
+        :param  is_missing_threshold_lower: Threshold for flagging as missing with reference to previous event
+        :param is_missing_threshold_upper: Threshold for flagging as missing with reference to next event
+        :param how: use 'previous'-default event only or 'both'
         :return:
         """
         # SCENARIO 1-HOURS AFTER PREVIOUS EVENT IS WITHIN ACCEPTABLE WINDOW
@@ -656,20 +657,22 @@ def convert_date_to_string(date_obj):
     return date_1_str
 
 
-def xml_to_csv(xml_file, csv_file):
+def convert_xml_to_csv(config=None, ts=None):
     """
      Converts xml_file to csv file
-    :param xml_file:
-    :param csv_file:
+    :param config: Object with details about file location
     :return:
     """
+    xml_file = config.get_data_dir() + 'sms.xml'
+    csv_file = config.get_raw_data_dir() + 'sms_' + ts.strftime('%m-%d-%Y') + '.csv'
 
     try:
-        e = ET.parse(xml_file).getroot()
-        lst = e.findall('sms')
+        et = ET.parse(xml_file).getroot()
+        lst = et.findall('sms')
         header = lst[0].keys()
     except Exception as e:
         print('Failed to read xml because of this error %s' % e)
+
 
     try:
         with open(csv_file, 'w', encoding='UTF-8') as f:
@@ -801,7 +804,7 @@ def create_box_obj_from_events(xml_file=None, box_metadata=None, after_event_thr
         # Clean up
         box_obj.drop_events()
 
-        # check number of events-skiip boxes with less than 5 messages
+        # check number of events-skip boxes with less than 5 messages
         if len(box_obj.actual_events) < 5:
             print('SKIPPING BOX {} BECAUSE IT HAS ONLY {} EVENTS..'.format(bx_id,len(box_obj.actual_events)))
             continue
@@ -836,7 +839,7 @@ def extract_box_id(message):
         return digits_in_msg[0]
 
 
-def save_datasets(box_objects=None, output_file_v1='sms_v1.csv', output_file_v2='sms_v2.csv'):
+def save_datasets(box_objects=None, output_file_v1='sms_observed.csv', output_file_v2='sms_rect_hr.csv'):
     """
     Saves sms_todays date_v1.csv-the first processed file to be outputed.
     :param output_file: Full path of output file
@@ -870,11 +873,11 @@ def save_datasets(box_objects=None, output_file_v1='sms_v1.csv', output_file_v2=
         print(desired_trace)
 
 
-def process_raw_sms(sms_v1_file=None, sms_v2_file=None, raw_sms='sms.xml', box_details='Boxes.csv', debug_mode=True):
+def process_raw_sms(sms_observed_file=None, sms_rect_hr_file=None, raw_sms='sms.xml', box_details='Boxes.csv', debug_mode=True):
     """
     Does full processing of the raw data and saves processed files to disk
-    :param sms_v1_file: File to be saved  as sms_v1
-    :param sms_v2_file: File to be saved  as sms_v2
+    :param sms_observed_file: File to be saved  as sms_observed
+    :param sms_rect_hr_file: File to be saved  as sms_rect_hr
     :param raw_sms: sms.xml
     :param box_details: Boxes.csv
     :param debug_mode: Whether to debug or not
@@ -887,12 +890,61 @@ def process_raw_sms(sms_v1_file=None, sms_v2_file=None, raw_sms='sms.xml', box_d
     box_objects = create_box_obj_from_events(raw_sms, box_metadata, debug_mode=debug_mode)
     print('SUCCESSFULLY CREATED BOX OBJECTS.........')
 
-    # ------------ SAVE SMS_V1.CSV --------------
+    # ------------ SAVE sms_observed.CSV --------------
     print('START SAVING DATA TO FILE...')
-    save_datasets(box_objects, sms_v1_file, sms_v2_file)
+    save_datasets(box_objects, sms_observed_file, sms_rect_hr_file)
 
     # ------------ SAVE BOX-LEVEl-VARIABLES --------------
 
+
+def calculate_distance(pt1, pt2):
+    """
+    Computes distance between two geographic coordinates
+    :param pt1: [Lat,Lon] for first point
+    :param pt2: [Lat,Lon] for second
+    :returns distance in km between the two points
+    """
+    # Radius of the earth in km (Hayford-Ellipsoid)
+    EARTH_RADIUS = 6378388 / 1000
+
+    d_lat = radians(pt1[0] - pt2[0])
+    d_lon = radians(pt1[1] - pt2[1])
+
+    lat1 = radians(pt1[0])
+    lat2 = radians(pt2[0])
+
+    a = sin(d_lat / 2) * sin(d_lat / 2) + \
+        sin(d_lon / 2) * sin(d_lon / 2) * cos(lat1) * cos(lat2)
+
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    return c * EARTH_RADIUS
+
+
+def k_nearest_boxes(box_metadata_file=None, box_id=None, box_lat_lon=None, k=2):
+    """
+    Selects k-nearest boxes to a refernce box. This includes a box in the same PSU
+    :param box_metadata_file:
+    :param box_id:
+    :param box_lat_lon:
+    :param neighbors:
+    :return:
+    """
+    df = pd.read_csv(box_metadata_file, usecols=['LONG', 'LAT', 'ClusterId', 'BoxID'])
+    df.rename(columns={'LONG': 'lon', 'LAT': 'lat', 'ClusterId': 'psu', 'BoxID': 'box_id'}, inplace=True)
+    bx = df.sort_values(by='psu')
+
+    # remove box id under consideration so that the idea of neighbors makes sense
+    bx = bx[bx.box_id != box_id]
+    bx.is_copy = False
+
+    bx['dist'] = bx.apply(lambda row: calculate_distance([row['lat'], row['lon']], box_lat_lon), axis=1)
+
+    nearest_n = bx.sort_values(by=['dist'], ascending=True)[:k]
+
+    neighbors = list(nearest_n.box_id.values)
+
+    return neighbors
 
 # TODO this will save BOX level variables
 def save_viz_variables(output_file, raw_sms='sms.xml', box_details='Boxes.csv'):
