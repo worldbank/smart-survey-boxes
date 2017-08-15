@@ -26,6 +26,7 @@ class Configurations:
 
     # windows-onedrive
     WINDOWS_DATA_DIR = "C:/Users/wb344850/WBG/William Hutchins Seitz - 01.data/"
+    WINDOWS_XML_DIR = "C:/Users/wb344850/Google Drive/SMSBuckupRestore/"
     WINDOWS_RAW_SMS_DIR = "C:/Users/wb344850/WBG/William Hutchins Seitz - 01.data/raw_sms/"
     WINDOWS_PROCESSED_SMS_DIR = "C:/Users/wb344850/WBG/William Hutchins Seitz - 01.data/processed_sms/"
     WINDOWS_MODEL_DIR = "C:/Users/wb344850/WBG/William Hutchins Seitz - 01.data/imputation_models/"
@@ -44,6 +45,12 @@ class Configurations:
         self.output_dir = None
         self.imputation_approach = imputation_approach
         self.debug_mode = debug_mode
+
+    def get_xml_dir(self):
+        if self.platform == 'mac':
+            return self.MAC_DATA_DIR
+        elif self.platform == 'bank_windows':
+            return self.WINDOWS_XML_DIR
 
     def get_data_dir(self):
         if self.platform == 'mac':
@@ -247,7 +254,7 @@ def preprocesss_raw_sms(configuration=None, debugging=True):
     """
     try:
         box_file = configuration.get_data_dir() + 'Boxes.csv'
-        xml_file = configuration.get_data_dir() + 'sms.xml'
+        xml_file = configuration.get_xml_dir() + 'sms.xml'
         sms_observed = configuration.get_processed_data_dir() + 'sms_observed.csv'  # filename for sms_observed based on date
         sms_rect_hr = configuration.get_processed_data_dir() + 'sms_rect_hr.csv'  # filename for sms_rect_hr based on date
 
