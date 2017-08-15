@@ -9,19 +9,16 @@ from pypower import preprocessing as prep
 
 
 if __name__ == "__main__":
-    conf = prep.Configurations(platform='mac', imputation_approach='etc', debug_mode=True)
+    conf = prep.Configurations(platform='mac', imputation_approach='etc', debug_mode=False)
     debug = conf.debug_mode
 
-    while True:
-        now = datetime.now()
+    now = datetime.now()
 
-        # ======== DATA BACK-UP   ==========================
-        ut.convert_xml_to_csv(config=conf, ts=now)
+    # ======== DATA BACK-UP   ==========================
+    ut.convert_xml_to_csv(config=conf, ts=now)
 
-        # ======== DATA PROCESSING =========================
-        prep.preprocesss_raw_sms(conf, debugging=debug)
+    # ======== DATA PROCESSING =========================
+    prep.preprocesss_raw_sms(conf, debugging=debug)
 
-        # ======== IMPUTE MISSING DATA =====================
-        prep.impute_with_etc(conf)
-
-        time.sleep(300)  # runs once in 24 hours
+    # ======== IMPUTE MISSING DATA =====================
+    prep.impute_with_etc(conf)

@@ -208,6 +208,15 @@ def impute_with_nearest_neighbor(file_sms_rect_hr=None, predictor_params = None,
     return df
 
 
+def replace_event_type_str(num):
+    """
+    Given event_type_num return the string.
+    :param num:
+    :return:
+    """
+    event_type = {1: 'pback', 2: 'pfail', 3: 'pon_mon', 4: 'pfail_mon'}
+    return event_type.get(num)
+
 def impute_with_etc(config_obj=None, prediction_features=None):
     """
     Fill out missing events using scikit-learn Extra Trees Classifier based.
@@ -238,7 +247,12 @@ def impute_with_etc(config_obj=None, prediction_features=None):
 
         df.loc[df['event_type_num'] == -1, 'event_type_num'] = y_predicted
 
+        # replace missing event_type_str
+        df.loc[df['event_type_str'] == 'missing', 'event_type_str'] = df['event_type_num'].apply(
+            lambda x: replace_event_type_str(x))
+
         df.to_csv(file_sms_rect_hr_imp, index=False)
+
     except Exception as e:
         print(e)
 
