@@ -2,13 +2,11 @@
 For making out of sample predictions and imputations
 """
 
-# import packages
-from datetime import datetime, date, time, timedelta
-from pypower import data_utils as ut
+from datetime import timedelta
+
 import pandas as pd
-import numpy as np
-import itertools
-import re
+
+from pypower import data_utils as ut
 
 
 class ImputationNearestNeighbor:

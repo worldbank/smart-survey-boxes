@@ -2,22 +2,18 @@
 A helper module for preprocessing data to various formats before being used.
 """
 
-# import packages
-import os
+import csv
+import re
+
 import sys
 import traceback
-from datetime import datetime, date, time, timedelta
-from collections import OrderedDict, defaultdict
+import xml.etree.ElementTree as ET
+from collections import OrderedDict
+from datetime import datetime, timedelta
 from math import radians, cos, sin, atan2, sqrt
 
 import pandas as pd
-import numpy as np
-
 from pytz import timezone as tz
-import itertools
-import xml.etree.ElementTree as ET
-import csv
-import re
 
 
 class Box:

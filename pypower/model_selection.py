@@ -2,25 +2,23 @@
 This module is for evaluating model perfomance
 '''
 
-# import packages
-import sys
-import multiprocessing
-import traceback
-import random
-from datetime import datetime, date, time, timedelta
-import pandas as pd
-import numpy as np
 import itertools
-import re
-from random import randint, sample
-from pypower import prediction_models as pred
-from pypower import data_utils as ut
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
-from pypower import preprocessing as prep
+import multiprocessing
+import random
+
+import sys
+import traceback
+from datetime import datetime
+
 import matplotlib.pylab as plt
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.model_selection import cross_val_score
+
+from pypower import data_utils as ut
+from pypower import prediction_models as pred
+from pypower import preprocessing as prep
 
 
 def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=True, sample_thres=500000):
