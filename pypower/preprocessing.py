@@ -1,8 +1,9 @@
-'''
+"""
 This is where we do the actual data preprocessing including imputation
-'''
+"""
 
 import sys
+import os
 import traceback
 from datetime import datetime
 
@@ -50,37 +51,37 @@ class Configurations:
         if self.platform == 'mac':
             return self.MAC_DATA_DIR
         elif self.platform == 'bank_windows':
-            return self.WINDOWS_XML_DIR
+            return os.path.normpath(self.WINDOWS_XML_DIR)
 
     def get_data_dir(self):
         if self.platform == 'mac':
             return self.MAC_DATA_DIR
         elif self.platform == 'bank_windows':
-            return self.WINDOWS_DATA_DIR
+            return os.path.normpath(self.WINDOWS_DATA_DIR)
 
     def get_raw_data_dir(self):
         if self.platform == 'mac':
             return self.MAC_RAW_SMS_DIR
         elif self.platform == 'bank_windows':
-            return self.WINDOWS_RAW_SMS_DIR
+            return os.path.normpath(self.WINDOWS_RAW_SMS_DIR)
 
     def get_processed_data_dir(self):
         if self.platform == 'mac':
             return self.MAC_PROCESSED_SMS_DIR
         elif self.platform == 'bank_windows':
-            return self.WINDOWS_PROCESSED_SMS_DIR
+            return os.path.normpath(self.WINDOWS_PROCESSED_SMS_DIR)
 
     def get_outputs_dir(self):
         if self.platform == 'mac':
             return self.MAC_OUTPUTS_DIR
         elif self.platform == 'bank_windows':
-            return self.WINDOWS_OUTPUT_DIR
+            return os.path.normpath(self.WINDOWS_OUTPUT_DIR)
 
     def get_model_dir(self):
         if self.platform == 'mac':
             return self.MAC_MODEL_DIR
         elif self.platform == 'bank_windows':
-            return self.WINDOWS_MODEL_DIR
+            return os.path.normpath(self.WINDOWS_MODEL_DIR)
 
 
 def impute_with_universal_model(config_obj='config',how='nn'):
@@ -216,6 +217,7 @@ def replace_event_type_str(num):
     """
     event_type = {1: 'pback', 2: 'pfail', 3: 'pon_mon', 4: 'pfail_mon'}
     return event_type.get(num)
+
 
 def impute_with_etc(config_obj=None, prediction_features=None):
     """

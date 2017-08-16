@@ -1,7 +1,6 @@
 """
 For making out of sample predictions and imputations
 """
-
 from datetime import timedelta
 
 import pandas as pd

@@ -5,10 +5,11 @@ Trains ETC model once in 2 weeks!!!!
 import multiprocessing
 
 import pandas as pd
-from sklearn.externals import joblib
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.externals import joblib
 
 from pypower import preprocessing as prep
+
 
 def train_and_save_etc_model(config_obj=None, target='event_type_num', debug=False):
     """
