@@ -8,7 +8,7 @@ from pypower import preprocessing as prep
 
 
 if __name__ == "__main__":
-    conf = prep.Configurations(platform='mac', imputation_approach='etc', debug_mode=False)
+    conf = prep.Configurations(platform='bank_windows', imputation_approach='etc', debug_mode=False)
     debug = conf.debug_mode
 
     now = datetime.now()
