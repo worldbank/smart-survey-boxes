@@ -13,7 +13,9 @@ from datetime import datetime
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
 
 from pypower import data_utils as ut
@@ -28,8 +30,9 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
     :return:
     """
     # read in the data
-    file_sms_v2 = config_obj.get_processed_data_dir() + 'sms_v2.csv'
+    file_sms_v2 = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'
     results_dir = config_obj.get_outputs_dir()
+    debug = config_obj.debug_mode
 
     cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'day_sent','hour_sent','month_sent',
                    'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'data_source']
@@ -43,8 +46,9 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
 
     df = df[df.event_type_str != 'missing']
 
-    if df.shape[0] > sample_thres:
-        df = df.sample(frac=0.30)
+    if debug:
+        if df.shape[0] > sample_thres:
+            df = df.sample(frac=0.30)
 
     # whether to use inserted events or only observed_events
     if not inserted:
@@ -57,9 +61,14 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
 
     # Define models
     random_state = 1
-    clfs = {# 'RF': RandomForestClassifier(n_estimators=350, n_jobs=-1,
-            #                           random_state=random_state),
-            'ETC': ExtraTreesClassifier(n_estimators=350, n_jobs=-1, criterion='gini')
+    clfs = {'RF': RandomForestClassifier(n_estimators=100, n_jobs=-1,
+                                       random_state=random_state),
+            'ETC': ExtraTreesClassifier(n_estimators=100, n_jobs=-1, criterion='gini'),
+            'GBM': GradientBoostingClassifier(n_estimators=10,
+                                              random_state=random_state),
+            'LR': LogisticRegression(random_state=random_state),
+
+            'KNN': KNeighborsClassifier(n_neighbors=5)
             }
 
     # finally eveluate
@@ -104,7 +113,7 @@ def evaluate_out_of_the_box_models(model_list=None, data='df', features=None,
         results[nm] = scores
 
         # Feature importance
-        if nm != 'LR':
+        if nm not in ['LR', 'KNN']:
             clf.fit(X, y)
             feat_imp = pd.Series(clf.feature_importances_, features).sort_values(ascending=False)
             # print(feat_imp)
@@ -118,14 +127,18 @@ def evaluate_out_of_the_box_models(model_list=None, data='df', features=None,
     return results
 
 
-def batch_evaluation_imputation_nearest_neighbor(file_sms_v2=None, box_metadata_file=None,
-                                                 model_params=None, eval_params=None):
+def batch_evaluation_imputation_nearest_neighbor(config_obj=None, model_params=None, eval_params=None):
     """
     This just evaluates the nearest box predictor with a temporal window
     :param df:
     :param use_random:
     :return: a list with accuracy for each PSU
     """
+
+    # Files
+    file_sms_v2 = config_obj.get_processed_data_dir() + "sms_rect_hr.csv"
+    box_metadata_file = config_obj.get_data_dir() + "Boxes.csv"
+
     # read in the data
     cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'hour_sent', 'event_type_str']
 
@@ -342,9 +355,9 @@ if __name__ == "__main__":
     config.debug_mode = False
 
     # -----------EVALUATE OUT OF THE BOX MODELS----------------
-    batch_evaluation_of_the_box_models(config_obj=config, pooled=False, inserted=True)
+    # batch_evaluation_of_the_box_models(config_obj=config, pooled=False, inserted=True)
 
     # -----------EVALUATE NEAREST NEIGHBOR----------------------
-    #evaluate_nearest_neighbor(configs=config, debug_mode=config.debug_mode)
+    evaluate_nearest_neighbor(config_obj=config, debug_mode=config.debug_mode)
 
 

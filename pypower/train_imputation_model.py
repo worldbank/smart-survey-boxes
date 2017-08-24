@@ -7,6 +7,7 @@ import multiprocessing
 import pandas as pd
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.externals import joblib
+import pickle
 
 from pypower import preprocessing as prep
 
@@ -32,14 +33,14 @@ def train_and_save_etc_model(config_obj=None, target='event_type_num', debug=Fal
 
     # drop missing and test events
     num_missing = len(df[df.event_type_str == 'missing'])
-    print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
-    print('Discarding missing events...we dont need them for validation...')
+    print('Number of missing events...{} out of total {} in rectangular dataset (sms_rect_hr.csv)'.format(num_missing, df.shape[0]))
+    print('Discard missing events...we dont need them for training...training the model, this could take a while....')
 
     df = df[df.event_type_str != 'missing']
 
     # -------------FIX MODEL PARAMETERS----------------------------------
     # These parameters and features and features give best perfomance as of now
-    predictor_params = {'n_estimators': 350, 'n_jobs': -1, 'criterion': 'gini'}
+    predictor_params = {'n_estimators': 200, 'n_jobs': -1, 'criterion': 'gini'}
 
     prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
                            'wk_end']
@@ -50,7 +51,7 @@ def train_and_save_etc_model(config_obj=None, target='event_type_num', debug=Fal
     clf.fit(X, y)
 
     # -------------PICKLE MODEL---------------
-    joblib.dump(clf, model_name )
+    joblib.dump(clf, model_name)
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('forkserver', force=True)

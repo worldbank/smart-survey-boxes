@@ -15,10 +15,10 @@ if __name__ == "__main__":
     now = datetime.now()
 
     # ======== DATA BACK-UP   ==========================
-    ut.convert_xml_to_csv(config=conf, ts=now)
+    # ut.convert_xml_to_csv(config=conf, ts=now)
 
     # ======== DATA PROCESSING =========================
-    prep.preprocesss_raw_sms(conf, debugging=debug)
+    # prep.preprocesss_raw_sms(conf, debugging=debug)
 
     # ======== IMPUTE MISSING DATA =====================
     prep.impute_with_etc(conf)

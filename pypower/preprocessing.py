@@ -35,9 +35,10 @@ class Configurations:
 
     # mac
     MAC_DATA_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/"
+    MAC_XML_DIR = "/Users/dmatekenya/Google Drive/SMSBuckupRestore/"
     MAC_RAW_SMS_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/raw_sms/"
     MAC_PROCESSED_SMS_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/processed_sms/"
-    MAC_MODEL_DIR = "/Users/dmatekenya/Google Drive/World-Bank/electricity_monitoring/01.data/imputation_models/"
+    MAC_MODEL_DIR = "/Users/dmatekenya/imputation_models/"
     MAC_OUTPUTS_DIR = "/Users/dmatekenya/PycharmProjects/power-mon/outputs/"
 
     def __init__(self,platform='mac', imputation_approach='etc', debug_mode=True):
@@ -49,39 +50,45 @@ class Configurations:
 
     def get_xml_dir(self):
         if self.platform == 'mac':
-            return self.MAC_DATA_DIR
+            return self.MAC_XML_DIR
         elif self.platform == 'bank_windows':
-            return os.path.normpath(self.WINDOWS_XML_DIR)
+            path = os.path.normpath(self.WINDOWS_XML_DIR) + '\\'
+            return path
 
     def get_data_dir(self):
         if self.platform == 'mac':
             return self.MAC_DATA_DIR
         elif self.platform == 'bank_windows':
-            return os.path.normpath(self.WINDOWS_DATA_DIR)
+            path = os.path.normpath(self.WINDOWS_DATA_DIR) + '\\'
+            return path
 
     def get_raw_data_dir(self):
         if self.platform == 'mac':
             return self.MAC_RAW_SMS_DIR
         elif self.platform == 'bank_windows':
-            return os.path.normpath(self.WINDOWS_RAW_SMS_DIR)
+            path = os.path.normpath(self.WINDOWS_RAW_SMS_DIR) + '\\'
+            return path
 
     def get_processed_data_dir(self):
         if self.platform == 'mac':
             return self.MAC_PROCESSED_SMS_DIR
         elif self.platform == 'bank_windows':
-            return os.path.normpath(self.WINDOWS_PROCESSED_SMS_DIR)
+            path = os.path.normpath(self.WINDOWS_PROCESSED_SMS_DIR) + '\\'
+            return path
 
     def get_outputs_dir(self):
         if self.platform == 'mac':
             return self.MAC_OUTPUTS_DIR
         elif self.platform == 'bank_windows':
-            return os.path.normpath(self.WINDOWS_OUTPUT_DIR)
+            path = os.path.normpath(self.MAC_OUTPUTS_DIR) + '\\'
+            return path
 
     def get_model_dir(self):
         if self.platform == 'mac':
             return self.MAC_MODEL_DIR
         elif self.platform == 'bank_windows':
-            return os.path.normpath(self.WINDOWS_MODEL_DIR)
+            path = os.path.normpath(self.WINDOWS_MODEL_DIR) + '\\'
+            return path
 
 
 def impute_with_universal_model(config_obj='config',how='nn'):
