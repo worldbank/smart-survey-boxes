@@ -659,7 +659,7 @@ def convert_xml_to_csv(config=None, ts=None):
     :param config: Object with details about file location
     :return:
     """
-    xml_file = config.get_data_dir() + 'sms.xml'
+    xml_file = config.get_xml_dir() + 'sms.xml'
     csv_file = config.get_raw_data_dir() + 'sms_' + ts.strftime('%m-%d-%Y') + '.csv'
 
     try:
