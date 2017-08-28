@@ -11,10 +11,12 @@ imputing missing values in the data and doing out of sample estimations.
 
 Key components
 ----------------------
+This project has the following components:
 
-* What is the research about
-* This is a main concept
-* This is a main goal
+* Data preprocessing
+* Imputation
+* Out of sample prediction
+* Satellite night lights integration
 
 
 Folder Structure for the project
