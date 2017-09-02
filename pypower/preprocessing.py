@@ -226,7 +226,7 @@ def replace_event_type_str(num):
     return event_type.get(num)
 
 
-def impute_with_etc(config_obj=None, prediction_features=None):
+def impute_with_out_of_the_box_model(config_obj=None, prediction_features=None, model_name=None):
     """
     Fill out missing events using scikit-learn Extra Trees Classifier based.
     :param config_obj:
@@ -235,8 +235,7 @@ def impute_with_etc(config_obj=None, prediction_features=None):
     """
     file_sms_rect_hr = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'
 
-    model_file = config_obj.get_model_dir() + 'ETC.pkl'
-
+    model_file = config_obj.get_model_dir() + model_name
     file_sms_rect_hr_imp = config_obj.get_processed_data_dir() + 'sms_rect_hr_imp.csv'
 
     df = pd.read_csv(file_sms_rect_hr)

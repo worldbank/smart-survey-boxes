@@ -23,15 +23,16 @@ class Box:
 
     TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
-    def __init__(self, box_id=1024, psu=1, lon=1, lat=2, date_collection_started=None):
+    def __init__(self, box_id=1024, region='Dushnabe', district=None, psu=1, lon=1, lat=2, urban_rural=None,
+                 date_collection_started=None):
         self.box_id = box_id
+        self.region = region
+        self.district = district
         self.psu = psu
         self.lon = lon
         self.lat = lat
         self.date_collection_started = date_collection_started
-        self.urban_rural = None
-        self.region = None
-        self.district = None
+        self.urban_rural = urban_rural
         self.actual_events = []  # Storing in a set to ensure there are no duplicate events for the same box
         self.hourly_events = None  # Stored in a dictionary for fast access
         self.daily_summaries = OrderedDict()  # Store summariesd variables for each day
@@ -86,7 +87,7 @@ class Box:
         required_box_metadata_dict = {}
 
         if not required_box_metadata:
-            required_box_metadata = ['box_id', 'psu', 'lon', 'lat']
+            required_box_metadata = ['box_id', 'region', 'district', 'urban_rural', 'psu', 'lon', 'lat']
 
         for i in required_box_metadata:
             if i in all_box_metadata:
@@ -107,7 +108,7 @@ class Box:
         """
         if not event_attr:
             event_attr = ['datetime_sent_raw', 'datetime_received', 'datetime_sent', 'message',
-                          'event_type_str', 'event_type_num', 'box_state']
+                          'event_type_str', 'event_type_num', 'box_state','power_state']
         if not box_attr:
             box_attr = ['box_id', 'psu', 'loc']
 
@@ -207,15 +208,16 @@ class Box:
 
         return self.daily_summaries
 
-    # TODO power_on_hours
+    # TODO: power_on_hours
     def power_on_hours(self):
         """
         For a single day, calculates how many hours power was on
         :return:
         """
+        pass
 
     def generate_hourly_events(self, time_resolution='hr',
-                                     after_event_threshold=12, before_event_threshold=12, how_to_insert='prev'):
+                                     after_event_threshold=13, before_event_threshold=13, how_to_insert='prev'):
         """
         Creates rectangular dataset at 1-hour intervals
         :param time_resolution: e.g., 1 hr
@@ -247,7 +249,7 @@ class Box:
         self.hourly_events = all_events
 
     def assign_event_type(self, prev_event, time_after_previous_event, next_event, time_before_next_event,
-                          is_missing_threshold_lower=12, is_missing_threshold_upper=6, how='prev'):
+                          is_missing_threshold_lower=13, is_missing_threshold_upper=7, how='prev'):
         """
         Assign event_type_str for an inserted event
         :param prev_event: Previous event
@@ -311,14 +313,14 @@ class Box:
             # create new event with message body set to 'not_observed'
             event_obj = Event(message='not_observed', datetime_sent_hr=ts, datetime_sent_raw=None)
 
-            # set all important attributes
-            event_obj.set_attributes()
-
             # to carry over last event type or not
             event_obj.event_type_str = self.assign_event_type(ev0.event_type_str, hrs_after_last_event,
                                                           ev1.event_type_str, hrs_before_next_event,
                                                           is_missing_threshold_lower,
                                                           is_missing_threshold_upper, how)
+
+            # set all important attributes
+            event_obj.set_attributes(inserted=True)
 
             event_obj.data_source = 'insertion'  # source of event data
 
@@ -344,8 +346,9 @@ class Box:
         :return: pandas dataframe
         """
         if not columns:
-            columns = ['box_id', 'psu', 'lon', 'lat','datetime_sent_raw', 'str_datetime_sent',
-                        'str_datetime_sent_hr', 'event_type_str', 'event_type_num', 'ping_event', 'data_source']
+            columns = ['box_id', 'region', 'district', 'urban_rural', 'psu', 'lon', 'lat','datetime_sent_raw',
+                       'str_datetime_sent', 'str_datetime_sent_hr', 'event_type_str', 'event_type_num', 'power_state',
+                       'ping_event', 'data_source']
 
         # change from dictionary to list
         box_metadata = self.get_box_metadata()
@@ -374,15 +377,17 @@ class Box:
 
         return df
 
+
     def dataframe_from_hourly_events(self, columns=None):
         """
         creates pandas dataframe for convinient usage in other processes
         :return: pandas dataframe
         """
         if not columns:
-            columns = ['box_id', 'psu', 'lon', 'lat', 'datetime_sent_raw', 'datetime_received', 'str_datetime_sent',
-                       'str_datetime_sent_hr', 'day_sent', 'hour_sent', 'month_sent', 'wk_day_sent', 'wk_end',
-                       'event_type_str', 'event_type_num', 'ping_event', 'data_source']
+            columns = ['box_id', 'region', 'district', 'urban_rural', 'psu', 'lon', 'lat', 'datetime_sent_raw',
+                       'datetime_received','str_datetime_sent', 'str_datetime_sent_hr', 'day_sent', 'hour_sent',
+                       'month_sent','wk_day_sent', 'wk_end','event_type_str', 'event_type_num', 'power_state',
+                       'ping_event', 'data_source']
 
         # change from dictionary to list
         box_metadata = self.get_box_metadata()
@@ -462,9 +467,9 @@ class Event:
         self.power_state = -1  # set default to unknown
         # three sources: observed_event (actual), inserted_event (interpolated between events), imputed_event
         #  (when event is missing)
-        self.data_source = None
+        self.data_source = None # whether data is observed or inserted
 
-    def set_attributes(self):
+    def set_attributes(self, inserted=False):
         # --------DATETIME and associated variables which is used for all time-stamp purposes-------
         if self.datetime_sent_hr:
             self.datetime_sent = self.datetime_sent_hr
@@ -497,7 +502,9 @@ class Event:
 
         # --------TYPE OF EVENT VARIABLES--------
         event_type = {'test': 0, 'pback': 1, 'pfail': 2, 'pon_mon': 3, 'pfail_mon': 4, 'missing': -1}
-        self.event_type_str = self.detect_event_type_from_message(self.message)  # category of event
+        if not inserted:
+            self.event_type_str = self.detect_event_type_from_message(self.message)  # category of event
+
         self.event_type_num = event_type.get(self.event_type_str)  # same as abobe but use numeric values
 
         # POWER STATE: unknown (-1), power on (1), power-off (0)
@@ -767,12 +774,13 @@ def create_box_obj_from_events(xml_file=None, box_metadata=None, after_event_thr
     box_events = event_dict_from_xml(xml_file)  # convert sms.xml into dict for faster access (hopefully)
     box_objects = {}  # holds box objects which we will return
 
-    i = 0 # for debugging
+    i = 0  # for debugging
     for bx_id, value in box_metadata.items():
 
         box_obj = Box(date_collection_started=value.get('DateCollectionStart'),
                       box_id=bx_id, psu=value.get('psu'), lon=value.get('lon'),
-                      lat=value.get('lat'))
+                      urban_rural=value.get('URB_RUR'),
+                      lat=value.get('lat'), district=value.get('district'), region=value.get('region'))
 
         this_box_raw_events = box_events.get(bx_id)  # has raw event data
 
@@ -782,7 +790,7 @@ def create_box_obj_from_events(xml_file=None, box_metadata=None, after_event_thr
                           message=item.get('body'))
 
             # set all important attributes
-            event.set_attributes()
+            event.set_attributes(inserted=False)
 
             # indicate data source
             event.data_source = 'observed_event'

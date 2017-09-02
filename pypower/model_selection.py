@@ -4,6 +4,7 @@ This module is for evaluating model perfomance
 
 import itertools
 import multiprocessing
+from collections import namedtuple
 import random
 
 import sys
@@ -11,19 +12,261 @@ import traceback
 from datetime import datetime
 
 import matplotlib.pylab as plt
+from prettytable import PrettyTable
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import accuracy_score, roc_auc_score, make_scorer, average_precision_score, \
+    precision_score, recall_score, classification_report, confusion_matrix
 
 from pypower import data_utils as ut
 from pypower import prediction_models as pred
 from pypower import preprocessing as prep
 
 
-def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=True, sample_thres=500000):
+def prepare_data_for_out_of_box_evaluation(config_obj=None, target_var='event_type_num',
+                                           exclude_inserted_events=False, sample_thres=500000):
+
+    file_sms_v2 = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'
+    results_dir = config_obj.get_outputs_dir()
+    debug = config_obj.debug_mode
+
+    cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'day_sent', 'hour_sent', 'month_sent',
+                   'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'power_state', 'data_source']
+
+    df = pd.read_csv(file_sms_v2, usecols=cols_to_use)
+
+    # drop missing and test events
+    num_missing = len(df[df.event_type_str == 'missing'])
+    # print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
+    # print('Discarding missing events...we dont need them for validation...')
+
+    df = df[df.event_type_str != 'missing']
+
+    # whether to use inserted events or only observed_events
+    if exclude_inserted_events:
+        print('Use only observed events....dropping inserted events')
+        df = df[df.data_source == 'observed_event']
+
+    if debug:
+        if df.shape[0] > sample_thres:
+            df = df.sample(frac=0.30)
+
+            print('---DEBUG MODE, ONLY USING 30 PERCENT OF DATA: {:,} EVENTS!!'.format(df.shape[0]))
+
+    if not debug:
+        if exclude_inserted_events:
+            print_experiment_details(df, target_var)
+        else:
+            print_experiment_details(df, target_var)
+
+    # Features to use for prediction
+    prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
+                           'wk_end']
+
+    return prediction_features, df, results_dir
+
+
+def print_experiment_details(df, target_var):
+    print('4. Data-size===> observed events, {:,} events !!'.format(df.shape[0]))
+    print('5. Frequency distribution for target variable')
+    print()
+    x = PrettyTable(field_names=[target_var, 'Proportion (%)'])
+    counts = df[target_var].value_counts(normalize=True)
+    for idx in counts.index:
+        x.add_row([idx, round(counts[idx] * 100, 4)])
+    print(x)
+
+    print()
+    print(' Perfomance Benchmarks')
+    print('=======================================================')
+    rand_guess = evaluate_random_classifier(df, iterations=100, target_var=target_var)
+    print('1. Random classifier: accuracy=>{:.4f}%, precision=>{:.4f}%, recall=>{:.4f}%'.format(rand_guess[0],
+        rand_guess[1],rand_guess[2]))
+    majority_classifier = evaluate_majority_classifier(df, iterations=100, target_var=target_var)
+    print('2. Majority class classifier:  accuracy=>{:.4f}%, precision=>{:.4f}%, recall=>{:.4f}%'.format(
+        majority_classifier[0],majority_classifier[1],majority_classifier[2]))
+
+
+def split_dataframe(df):
+
+    # shuffle it first
+    df = df.sample(frac=1, random_state=1).reset_index(drop=True)
+
+    # take out train set
+    train_df = df.sample(frac=0.7, random_state=2)
+
+    # index difference
+    all_index = df.index
+    train_index = train_df.index
+    test_index = all_index.difference(train_index)
+
+    # test dataframe
+    test_df = df.ix[test_index]
+
+    return train_df, test_df
+
+
+def evaluate_random_classifier(df,iterations=10, target_var=None):
+    acc = []
+    prec = []
+    rec = []
+
+    for i in range(iterations):
+        #
+        train, test = split_dataframe(df)
+        values = list(test[target_var].unique())
+
+        y_test = test[target_var].values
+        y_predicted = [random.choice(values) for _ in range(test.shape[0])]
+
+        accuracy = accuracy_score(y_true=y_test, y_pred=y_predicted)
+        acc.append(accuracy)
+
+        if len(values) > 2:
+            precision = precision_score(y_true=y_test, y_pred=y_predicted, average='macro')
+            prec.append(precision)
+
+        if len(values) == 2:
+            precision = average_precision_score(y_true=y_test, y_score=y_predicted, average='macro')
+            prec.append(precision)
+
+        recall = recall_score(y_true=y_test, y_pred=y_predicted, average='macro')
+        rec.append(recall)
+
+    return np.mean(acc)*100, np.mean(precision)*100, np.mean(rec)*100
+
+
+def evaluate_majority_classifier(df, iterations=None, target_var=None):
+    """
+    Evaluates majority classifier
+    :param df:
+    :return:
+    """
+    acc = []
+    prec = []
+    rec = []
+    for i in range(iterations):
+        #
+        train, test = split_dataframe(df)
+        counts = train[target_var].value_counts(normalize=True)
+        # print(counts)
+        predicted = counts.idxmax()
+
+        y_test = test[target_var].values
+        y_predicted = [predicted for _ in range(test.shape[0])]
+
+        accuracy = accuracy_score(y_true=y_test, y_pred=y_predicted)
+        acc.append(accuracy)
+
+        if counts.shape[0] > 2:
+            precision = precision_score(y_true=y_test, y_pred=y_predicted, average='macro')
+            prec.append(precision)
+
+        if counts.shape[0] == 2:
+            precision = average_precision_score(y_true=y_test, y_score=y_predicted, average='macro')
+            prec.append(precision)
+
+        recall = recall_score(y_true=y_test, y_pred=y_predicted, average='macro')
+        rec.append(recall)
+
+    return np.mean(acc)*100, np.mean(precision)*100, np.mean(rec)*100
+
+
+def location_batch_evaluation_out_of_the_box_models(config_obj=None, target_var='event_type_num', pooled=False, k=3,
+                                           exclude_inserted_events=False, sample_thres=500000, loc_var='region',
+                                        places=None, output_filename=None):
+    """
+    Validates out of the box models such as random forest.
+    :param df:
+    :return:
+    """
+    # read in the data
+    file_sms_v2 = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'
+    results_dir = config_obj.get_outputs_dir()
+    debug = config_obj.debug_mode
+
+    cols_to_use = ['box_id', 'region', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'day_sent','hour_sent','month_sent',
+                   'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'power_state', 'data_source']
+
+    df = pd.read_csv(file_sms_v2, usecols=cols_to_use)
+
+    # drop missing and test events
+    num_missing = len(df[df.event_type_str == 'missing'])
+    # print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
+    # print('Discarding missing events...we dont need them for validation...')
+
+    df = df[df.event_type_str != 'missing']
+
+    # whether to use inserted events or only observed_events
+    if exclude_inserted_events:
+        print('Use only observed events....dropping inserted events')
+        df = df[df.data_source == 'observed_event']
+
+    if debug:
+        if df.shape[0] > sample_thres:
+            df = df.sample(frac=0.30)
+
+            print('---DEBUG MODE, ONLY USING 30 PERCENT OF DATA: {:,} EVENTS!!'.format(df.shape[0]))
+
+    if not debug:
+        if exclude_inserted_events:
+            print()
+            print('EXPERIMENTING WITH OBSERVED EVENTS DATA ONLY: {:,} EVENTS!!'.format(df.shape[0]))
+        else:
+            print()
+            print('EXPERIMENTING WITH ALL DATA: {:,} EVENTS!!'.format(df.shape[0]))
+
+    # Features to use for prediction
+    prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
+                           'wk_end']
+
+    # select only data for the required time period
+    original_size = df.shape[0]
+    df = df[df[loc_var].isin(places)]
+    print()
+    print('Using {:,} events for this location, out of {:,} total events '.format(df.shape[0], original_size))
+
+    # Define models
+    random_state = 1
+    clfs = {'RF': RandomForestClassifier(n_estimators=100, n_jobs=-1,
+                                       random_state=random_state),
+            'ETC': ExtraTreesClassifier(n_estimators=100, n_jobs=-1, criterion='gini'),
+
+            'GBM': GradientBoostingClassifier(n_estimators=100,
+                                              random_state=random_state),
+            'LR': LogisticRegression(random_state=random_state),
+
+            # 'KNN': KNeighborsClassifier(n_neighbors=5)
+            }
+
+    # finally eveluate
+    results = evaluate_out_of_the_box_models(model_list=clfs, data=df, features=prediction_features,
+                                             target=target_var, output_dir=results_dir,folds=k)
+
+    output = []
+    print()
+    print('Number of cross-validation folds set to {}'.format(k))
+    for model, cv_score in results.items():
+        print("(%s) CV Score : Mean - %.2g | Median - %.2g | Std - %.2g | Min - %.2g | Max - %.2g"
+              % (
+              model, np.mean(cv_score) * 100, np.median(cv_score) * 100, np.std(cv_score) * 100, np.min(cv_score) * 100,
+              np.max(cv_score) * 100))
+
+        output.append({'model': model, 'mean': np.mean(cv_score) * 100, 'median': np.median(cv_score) * 100,
+                      'std_dev': np.std(cv_score) * 100, 'min': np.min(cv_score) * 100, 'max': np.max(cv_score) * 100})
+
+    # save results to file
+    df = pd.DataFrame(output)
+    df.to_csv(results_dir + output_filename, index=False)
+
+
+def time_batch_evaluation_out_of_the_box_models(config_obj=None, target_var='event_type_num', pooled=False, k=3,
+                                           exclude_inserted_events=False, sample_thres=500000, months=None,
+                                            output_filename=None):
     """
     Validates out of the box models such as random forest.
     :param df:
@@ -35,25 +278,120 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
     debug = config_obj.debug_mode
 
     cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'day_sent','hour_sent','month_sent',
-                   'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'data_source']
+                   'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'power_state', 'data_source']
 
     df = pd.read_csv(file_sms_v2, usecols=cols_to_use)
 
     # drop missing and test events
     num_missing = len(df[df.event_type_str == 'missing'])
-    print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
-    print('Discarding missing events...we dont need them for validation...')
+    # print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
+    # print('Discarding missing events...we dont need them for validation...')
 
     df = df[df.event_type_str != 'missing']
+
+    # whether to use inserted events or only observed_events
+    if exclude_inserted_events:
+        print('Use only observed events....dropping inserted events')
+        df = df[df.data_source == 'observed_event']
 
     if debug:
         if df.shape[0] > sample_thres:
             df = df.sample(frac=0.30)
 
+            print('---DEBUG MODE, ONLY USING 30 PERCENT OF DATA: {:,} EVENTS!!'.format(df.shape[0]))
+
+    if not debug:
+        if exclude_inserted_events:
+            print()
+            print('EXPERIMENTING WITH OBSERVED EVENTS DATA ONLY: {:,} EVENTS!!'.format(df.shape[0]))
+        else:
+            print()
+            print('EXPERIMENTING WITH ALL DATA: {:,} EVENTS!!'.format(df.shape[0]))
+
+    # Features to use for prediction
+    prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
+                           'wk_end']
+
+    # select only data for the required time period
+    original_size = df.shape[0]
+    df = df[df['month_sent'].isin(months)]
+    print()
+    print('Using {:,} events for this quarter, out of {:,} total events '.format(df.shape[0], original_size))
+
+    # Define models
+    random_state = 1
+    clfs = {'RF': RandomForestClassifier(n_estimators=100, n_jobs=-1,
+                                       random_state=random_state),
+            'ETC': ExtraTreesClassifier(n_estimators=100, n_jobs=-1, criterion='gini'),
+
+            'GBM': GradientBoostingClassifier(n_estimators=100,
+                                              random_state=random_state),
+            'LR': LogisticRegression(random_state=random_state),
+
+            # 'KNN': KNeighborsClassifier(n_neighbors=5)
+            }
+
+    # finally eveluate
+    results = evaluate_out_of_the_box_models(model_list=clfs, data=df, features=prediction_features,
+                                             target=target_var, output_dir=results_dir,folds=k)
+
+    output = []
+    print()
+    print('Number of cross-validation folds set to {}'.format(k))
+    for model, cv_score in results.items():
+        print("(%s) CV Score : Mean - %.2g | Median - %.2g | Std - %.2g | Min - %.2g | Max - %.2g"
+              % (
+              model, np.mean(cv_score) * 100, np.median(cv_score) * 100, np.std(cv_score) * 100, np.min(cv_score) * 100,
+              np.max(cv_score) * 100))
+
+        output.append({'model': model, 'mean': np.mean(cv_score) * 100, 'median': np.median(cv_score) * 100,
+                      'std_dev': np.std(cv_score) * 100, 'min': np.min(cv_score) * 100, 'max': np.max(cv_score) * 100})
+
+    # save results to file
+    df = pd.DataFrame(output)
+    df.to_csv(results_dir + output_filename, index=False)
+
+def batch_evaluation_out_of_the_box_models_pooled(config_obj=None, target_var='event_type_num', k=3,
+                                           exclude_inserted_events=False, sample_thres=500000, output_filename=None):
+    """
+    Validates out of the box models such as random forest.
+    :param df:
+    :return:
+    """
+    # read in the data
+    file_sms_v2 = config_obj.get_processed_data_dir() + 'sms_rect_hr.csv'
+    results_dir = config_obj.get_outputs_dir()
+    debug = config_obj.debug_mode
+
+    cols_to_use = ['box_id', 'region', 'district', 'urban_rural', 'psu', 'lon', 'lat', 'str_datetime_sent_hr',
+                   'day_sent','hour_sent','month_sent','wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str',
+                   'power_state', 'data_source']
+
+    df = pd.read_csv(file_sms_v2, usecols=cols_to_use)
+
+    # drop missing and test events
+    num_missing = len(df[df.event_type_str == 'missing'])
+    # print('Number of missing events...{} out of total {} in rectangular dataset'.format(num_missing, df.shape[0]))
+    # print('Discarding missing events...we dont need them for validation...')
+
+    df = df[df.event_type_str != 'missing']
+
     # whether to use inserted events or only observed_events
-    if not inserted:
+    if exclude_inserted_events:
         print('Use only observed events....dropping inserted events')
         df = df[df.data_source == 'observed_event']
+
+    if debug:
+        if df.shape[0] > sample_thres:
+            df = df.sample(frac=0.30)
+
+            print('---DEBUG MODE, ONLY USING 30 PERCENT OF DATA: {:,} EVENTS!!'.format(df.shape[0]))
+
+    if not debug:
+        if exclude_inserted_events:
+            print('EXPERIMENTING WITH OBSERVED EVENTS DATA ONLY: {:,} EVENTS!!'.format(df.shape[0]))
+        else:
+            print('EXPERIMENTING WITH ALL DATA: {:,} EVENTS!!'.format(df.shape[0]))
 
     # Features to use for prediction
     prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
@@ -64,34 +402,188 @@ def batch_evaluation_of_the_box_models(config_obj=None, pooled=False, inserted=T
     clfs = {'RF': RandomForestClassifier(n_estimators=100, n_jobs=-1,
                                        random_state=random_state),
             'ETC': ExtraTreesClassifier(n_estimators=100, n_jobs=-1, criterion='gini'),
-            'GBM': GradientBoostingClassifier(n_estimators=10,
+
+            'GBM': GradientBoostingClassifier(n_estimators=100,
                                               random_state=random_state),
             'LR': LogisticRegression(random_state=random_state),
 
-            'KNN': KNeighborsClassifier(n_neighbors=5)
+            # 'KNN': KNeighborsClassifier(n_neighbors=5)
             }
 
     # finally eveluate
+    results = evaluate_out_of_the_box_models_detailed_testing(model_list=clfs, data=df, features=prediction_features,
+                                             target=target_var, output_dir=results_dir,folds=k)
+    for k,v in results.items():
+        print()
+        print('+'*50)
+        print('Summary results for model: {}'.format(k))
+        print('+' * 50)
+        regions = ['Dushanbe', 'DRS', 'Sugd', 'Khatlon', 'GBAO']
+        for region in regions:
+            print()
+            print('Results for ** {} ** '.format(region))
+            res_region = []
+
+            for kk, vv in v.items():
+                res_region.append(vv.get(region)*100)
+
+            print(res_region)
+
+
+def batch_evaluation_out_of_the_box_models(config_obj=None, target_var='event_type_num', pooled=False, k=3,
+                                           accuracy=None, exclude_inserted_events=False, sample_thres=500000,
+                                           output_filename=None):
+    """
+    Validates out of the box models such as random forest.
+    :param df:
+    :return:
+    """
+    # Define models
+    random_state = 1
+    clfs = {'RF': RandomForestClassifier(n_estimators=100, n_jobs=-1,
+                                       random_state=random_state),
+            'ETC': ExtraTreesClassifier(n_estimators=100, n_jobs=-1, criterion='gini'),
+
+            'GBM': GradientBoostingClassifier(n_estimators=100,
+                                              random_state=random_state),
+            'LR': LogisticRegression(max_iter=25),
+
+            'KNN': KNeighborsClassifier()
+            }
+
+    # finally eveluate
+    prediction_features, df, results_dir = prepare_data_for_out_of_box_evaluation(config_obj=config_obj,
+                                            target_var='event_type_num',exclude_inserted_events=exclude_inserted_events,
+                                            sample_thres=sample_thres)
+
     results = evaluate_out_of_the_box_models(model_list=clfs, data=df, features=prediction_features,
-                                             target='event_type_num', output_dir=results_dir)
+                                             target=target_var, output_dir=results_dir,folds=k, metric=accuracy)
 
     output = []
+    print()
+    print('Experiment results')
+    print('======================================================')
+    res_tab = PrettyTable(field_names=['Model', 'Mean', 'Median', 'Std', 'Min', 'Max'])
     for model, cv_score in results.items():
-        print("(%s) CV Score : Mean - %.7g | Std - %.7g | Min - %.7g | Max - %.7g"
-              % (
-              model, np.mean(cv_score) * 100, np.std(cv_score) * 100, np.min(cv_score) * 100, np.max(cv_score) * 100))
-
+        res_tab.add_row([model, round(np.mean(cv_score) * 100, 4), round(np.median(cv_score) * 100, 4),
+                         round(np.std(cv_score) * 100, 4), round(np.min(cv_score) * 100, 4),
+                         round(np.max(cv_score) * 100, 4)])
         output.append({'model': model, 'mean': np.mean(cv_score) * 100,
-                      'std_dev': np.std(cv_score) * 100, 'min': np.min(cv_score) * 100,
-                      'max': np.max(cv_score) * 100})
+                       'std_dev': np.std(cv_score) * 100, 'min': np.min(cv_score) * 100,
+                       'max': np.max(cv_score) * 100})
+    print(res_tab)
+
 
     # save results to file
     df = pd.DataFrame(output)
-    df.to_csv(results_dir + 'out_of_the_box_model_eval_res.csv', index=False)
+    df.to_csv(results_dir + output_filename, index=False)
 
 
-def evaluate_out_of_the_box_models(model_list=None, data='df', features=None,
-                                   target='event_type_num', output_dir=None):
+def evaluate_out_of_the_box_models_detailed_testing(model_list=None, data='df', features=None,
+                                   target='event_type_num', output_dir=None, folds=3):
+    """
+    Evaluates out of the box models and picks the best model based on accuracy
+    using k-fold.
+    :param model_list: dict-A list of models to try
+    :param df: The data to test
+    :param features:
+    :param target: The variable to predict
+    :return: A dict object with model name and accuracy
+    """
+    results = {}
+
+    for nm, clf in model_list.items():
+        #print('Working on ...%s' %nm)
+
+        nm_scores = {}
+
+        for i in range(folds):
+            train, test = split_dataframe(data)
+            X_train = train[features].values
+            y_train = train[target].values
+
+            clf.fit(X_train, y_train)
+
+            # Now test by region
+            scores_region = {}
+            for region in test.region.unique():
+                df_reg = test[test['region']==region]
+                X_test = df_reg[features].values
+                y_test = df_reg[target].values
+                acc = accuracy_score(y_true=y_test,y_pred=clf.predict(X_test))
+                scores_region[region] = acc
+
+            # # Now test by district
+            # scores_district = {}
+            # for dist in test.district.unique():
+            #     df_reg = test[test['district'] == dist]
+            #     X_test = df_reg[features].values
+            #     y_test = df_reg[target].values
+            #     acc = accuracy_score(y_true=y_test, y_pred=clf.predict(X_test))
+            #     scores_district[dist] = acc
+            #
+            # #combine region and district scores
+            # scores_loc = scores_region.update(scores_district)
+
+            # add scores for this run
+            nm_scores[i] = scores_region
+
+        results[nm] = nm_scores
+
+    return results
+
+
+def generate_classification_report(configs=None, sample_thres=None, target='event_type_num', folds=3,
+                                   exclude_inserted_events=None):
+    """
+    Evaluates out of the box models and picks the best model based on accuracy
+    using k-fold.
+    :param model_list: dict-A list of models to try
+    :param df: The data to test
+    :param features:
+    :param target: The variable to predict
+    :return: A dict object with model name and accuracy
+    """
+
+    features, data, results_dir = prepare_data_for_out_of_box_evaluation(config_obj=configs,target_var='event_type_num',
+                                                                        exclude_inserted_events=exclude_inserted_events,
+                                                                        sample_thres=sample_thres)
+
+    X = data[features].values
+    y = data[target].values
+
+    skf = StratifiedKFold(n_splits=folds, shuffle=True)
+
+    # Define models
+    random_state = 1
+    model_list = {'GBM': GradientBoostingClassifier(n_estimators=100,
+                                              random_state=random_state)
+                    }
+    print()
+    print('Experiment results [model-->Gradient boosted trees(GBM)]')
+    print('========================================================')
+    for nm, clf in model_list.items():
+        i = 1
+        for train_index, test_index in skf.split(X, y):
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            clf.fit(X_train, y_train)
+            #acc = accuracy_score(y_true=y_test, y_pred=clf.predict(X_test))
+            lookup = {1: 'pback', 2: 'pfail', 3: 'pon_mon', 4: 'pfail_mon'}
+            y_true = pd.Series([lookup[_] for _ in y_test])
+            y_pred = pd.Series([lookup[_] for _ in clf.predict(X_test)])
+
+            print()
+            print('[Fold {}]: confusion matrix '.format(i))
+            print('-------------------------------------------------')
+            print(pd.crosstab(y_true, y_pred, rownames=['Actual'],
+                              colnames=['Predicted']).apply(lambda r: round(100.0 * r / r.sum(), 4)))
+            i += 1
+
+
+def evaluate_out_of_the_box_models(model_list=None, data='df', features=None, metric=None,
+                                   target='event_type_num', output_dir=None, folds=3):
     """
     Evaluates out of the box models and picks the best model based on accuracy
     using k-fold.
@@ -107,9 +599,17 @@ def evaluate_out_of_the_box_models(model_list=None, data='df', features=None,
     results = {}
 
     for nm, clf in model_list.items():
-        print ('Working on ...%s' %nm)
+        #print('Working on ...%s' %nm)
+        if metric == 'auc':
+            scores = cross_val_score(clf, X, y, cv=folds, scoring=make_scorer(roc_auc_score))
+        elif metric == 'acc':
+            scores = cross_val_score(clf, X, y, cv=folds, scoring=make_scorer(accuracy_score))
+        elif metric == 'prec':
+            scores = cross_val_score(clf, X, y, cv=folds, scoring=make_scorer(average_precision_score))
+        elif metric == 'recall':
+            scores = cross_val_score(clf, X, y, cv=folds, scoring=make_scorer(recall_score, {'average':'macro'}))
 
-        scores = cross_val_score(clf, X, y, cv=3)
+
         results[nm] = scores
 
         # Feature importance
@@ -240,7 +740,6 @@ def evaluate_imputation_nearest_neighbor_model(all_data=None, test_box_id=1000,
 
     return results
 
-
 def imputation_nearest_neigbor_model_accuracy(model_object=None, test_data=None, box_id=90, xy=None):
     """
     Returns accuracy after making predictions for the test data.
@@ -355,7 +854,10 @@ if __name__ == "__main__":
     config.debug_mode = False
 
     # -----------EVALUATE OUT OF THE BOX MODELS----------------
-    # batch_evaluation_of_the_box_models(config_obj=config, pooled=False, inserted=True)
+    output_file = 'out_of_the_box_model_eval_res.csv'
+    target = 'event_type_num'
+    batch_evaluation_out_of_the_box_models(config_obj=config, target_var=target,
+                                           pooled=False, inserted=True, output_filename=output_file)
 
     # -----------EVALUATE NEAREST NEIGHBOR----------------------
     evaluate_nearest_neighbor(config_obj=config, debug_mode=config.debug_mode)
