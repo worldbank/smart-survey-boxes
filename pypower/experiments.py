@@ -1,12 +1,24 @@
 import multiprocessing
 import datetime
-import prettytable
+from prettytable import PrettyTable
 import pandas as pd
+import numpy as np
+
+# tipot
+from tpot import TPOTClassifier
+
 
 # pypower
 from pypower import data_utils as util
 from pypower import preprocessing as prep
-from pypower import model_selection as mod_sel
+from pypower import model_selection_custom as mod_sel
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier, GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+
 
 
 def print_time_taken(start_time=None, end_time=None):
@@ -220,12 +232,47 @@ def experiment_region_district_pooled(env_obj=None):
                                                           target_var='power_state', output_filename=None,k=3)
 
 
+def try_out_tipot(conf=None, features=None, target='power_state'):
+    out = conf.get_outputs_dir()
+    data = pd.read_csv(conf.get_processed_data_dir() + 'sms_rect_hr.csv')
+
+    # resample data
+    data_1 = data[data['power_state'] == 1]
+    data_0 = data[data['power_state'] == 0]
+
+    data_res = data_0.append(data_1.sample(n=data_0.shape[0]))
+
+    # drop Nan
+    if not features:
+        features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent','wk_end']
+
+    X = data_res[features].values
+    y = data_res[target].values
+
+    clf = ExtraTreesClassifier(bootstrap=False, max_features=0.9500000000000001, min_samples_leaf=1, min_samples_split=10,
+                         n_estimators=100)
+
+    scores = cross_val_score(clf, X, y, cv=10)
+
+    print(np.max(scores), np.median(scores), np.mean(scores), np.min(scores))
+
+
+
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.75, test_size=0.25)
+    #
+    # tpot = TPOTClassifier(generations=100, population_size=100, verbosity=2, n_jobs=1, max_time_mins=420,
+    #                       scoring='accuracy')
+    #
+    # tpot.fit(X_train, y_train)
+    # print(tpot.score(X_test, y_test))
+    # tpot.export(out + 'tpot_code.py')
+
+
 def run_experiment(experiment_name=None):
     start = datetime.datetime.now()
     experiment_name
     end = datetime.datetime.now()
     print_time_taken(start_time=start, end_time=end)
-
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('forkserver', force=True)
@@ -233,6 +280,7 @@ if __name__ == "__main__":
     config = prep.Configurations(platform='mac')
     config.debug_mode = False
 
+    try_out_tipot(conf=config)
     # ======== EXPERIMENTS ======================
     # exp_list = {'overral_accuracy': experiment_test_accuracy_power_state(env_obj=config, f=3),
     #             'overral_precision': experiment_test_precision_power_state(env_obj=config, f=3),
@@ -243,7 +291,9 @@ if __name__ == "__main__":
     # for name, exp in exp_list:
     #     run_experiment(exp)
 
-    run_experiment(experiment_event_type_classification_report(env_obj=config, f=3))
+    # run_experiment(experiment_event_type_classification_report(env_obj=config, f=3))
+
+    #from_pixel_to_power_status(conf=config, target='power_state', features=['log_radiance'])
 
     # run_experiment(experiment_test_accuracy_event_type(env_obj=config, f=3))
 

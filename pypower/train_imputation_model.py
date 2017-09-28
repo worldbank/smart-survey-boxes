@@ -54,7 +54,7 @@ def train_and_save_etc_model(config_obj=None, target='event_type_num', debug=Fal
     joblib.dump(clf, model_name)
 
 
-def train_and_save_gbm_model(config_obj=None, target='event_type_num', debug=False):
+def train_and_save_gbm_model(config_obj=None, target='power_state', debug=False):
     """
     Returns sms_rect_hr file with missing values filled
     :return:
@@ -66,7 +66,7 @@ def train_and_save_gbm_model(config_obj=None, target='event_type_num', debug=Fal
     model_name = model_dir + 'gbm.pkl'
 
     cols_to_use = ['box_id', 'psu', 'lon', 'lat', 'str_datetime_sent_hr', 'day_sent', 'hour_sent', 'month_sent',
-                   'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'data_source']
+                   'wk_day_sent', 'wk_end', 'event_type_num', 'event_type_str', 'power_state', 'data_source']
 
     df = pd.read_csv(file_sms_rect_hr, usecols=cols_to_use)
 
@@ -74,26 +74,27 @@ def train_and_save_gbm_model(config_obj=None, target='event_type_num', debug=Fal
         df = df.sample(n=100000)
 
     # drop missing and test events
-    num_missing = len(df[df.event_type_str == 'missing'])
+    num_missing = len(df[df.power_state == -1])
     print('Number of missing events...{} out of total {} in rectangular dataset (sms_rect_hr.csv)'.format(num_missing, df.shape[0]))
     print('Discard missing events...we dont need them for training...training the model, this could take a while....')
 
-    df = df[df.event_type_str != 'missing']
+    df = df[df.power_state != -1]
 
     # -------------FIX MODEL PARAMETERS----------------------------------
     # These parameters and features and features give best perfomance as of now
-    predictor_params = {'n_estimators': 100, 'n_jobs': 1}
+    predictor_params = {'n_estimators': 100, 'random_state':1}
 
     prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
                            'wk_end']
 
     X = df[prediction_features].values
     y = df[target].values
-    clf = ExtraTreesClassifier(**predictor_params)
+    clf = GradientBoostingClassifier(**predictor_params)
     clf.fit(X, y)
 
     # -------------PICKLE MODEL---------------
     joblib.dump(clf, model_name)
+    print('Done with model training and save it to file')
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('forkserver', force=True)

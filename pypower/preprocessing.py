@@ -226,7 +226,7 @@ def replace_event_type_str(num):
     return event_type.get(num)
 
 
-def impute_with_out_of_the_box_model(config_obj=None, prediction_features=None, model_name=None):
+def impute_with_gradient_boosted_trees(config_obj=None, prediction_features=None, model_name=None):
     """
     Fill out missing events using scikit-learn Extra Trees Classifier based.
     :param config_obj:
@@ -240,7 +240,7 @@ def impute_with_out_of_the_box_model(config_obj=None, prediction_features=None, 
 
     df = pd.read_csv(file_sms_rect_hr)
 
-    df_missing = df[df['event_type_num'] == -1]
+    df_missing = df[df['power_state'] == -1]
 
     if not prediction_features:
         prediction_features = ['box_id', 'psu', 'lon', 'lat', 'hour_sent', 'month_sent', 'day_sent', 'wk_day_sent',
@@ -253,18 +253,14 @@ def impute_with_out_of_the_box_model(config_obj=None, prediction_features=None, 
 
         y_predicted = clf.predict(X)
 
-        df.loc[df['event_type_num'] == -1, 'event_type_num'] = y_predicted
-
-        # replace missing event_type_str
-        df.loc[df['event_type_str'] == 'missing', 'event_type_str'] = df['event_type_num'].apply(
-            lambda x: replace_event_type_str(x))
+        df.loc[df['power_state']== -1, 'power_state'] = y_predicted
 
         df.to_csv(file_sms_rect_hr_imp, index=False)
 
     except Exception as e:
         print(e)
 
-    print('SUCCESSFULLY IMPUTED WITH ETC')
+    print('SUCCESSFULLY IMPUTED WITH GBM')
 
 
 def preprocesss_raw_sms(configuration=None, debugging=True):

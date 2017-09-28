@@ -71,12 +71,13 @@ class ImputationNearestNeighbor:
         :param cond:
         :return:
         """
+        target = self.target_var
         if by_box:
             # Add hour column
             df['hr'] = df['datetime_sent_hr'].apply(lambda x: x.hour)
 
         else:
-            hr_cnts = df.groupby(['hour_sent', 'event_type_str'])['event_type_str'].agg(['count'])
+            hr_cnts = df.groupby(['hour_sent', target])[target].agg(['count'])
 
             hr_cnts = hr_cnts.reset_index()
 
