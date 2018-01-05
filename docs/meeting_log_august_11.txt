@@ -1,0 +1,75 @@
+Folder with
+BoxDetails.csv
+Boxes.csv
+Powerout.csv
+Cleanfull.xlsx
+…
+
+If something is updated —> it is overwriting
+
+When they change the address, the box id should remain the same, but the household id need to be created.
+
+Boxes change within PSU... New observations for box 300... 
+
+JP: Need to create household id
+
+Outputs for dashboards: powerout.csv of csv and boxdetails.csv and boxes.csv (double check)
+
+
+Data processing workflow:
+
+01: xml to csv everyday - ok
+02: prep data for imputation - ok
+03: model train - ok
+04: imputations - ok
+
+What are we predicting: 
+1 ping on
+2 power on 
+3 power off
+4 ping off
+
+•
+timestamp used == datesent
+•
+adjustments on deviceid have been made 
+•
+dropped how many == 2056 events
+•
+sms2.shape = bound by min max
+•
+12 hour difference discussion, missing threshold to be 13 hours. are ping messages well behaved? do they come in exactly by the minute? should be. but we can check this.
+•
+on imputation: imputing hourly status and creating implied series of events
+•
+starting from 14th hour we say the event is misssing
+•
+JP: thinks problematic imputation approach pon_mon and pfail_mon are hardwired. should it carry on? if you have powerback you will be saying powerback,powerback,powerback,powerback,powerback. 
+•
+status is continuous, event is switching of status
+•
+JP: e.g. every day this box is going to convert from power on monitoring to power fail monitoring  ...
+•
+LONG LAT - clustering kicks in, Time - make a test ...
+•
+prediction of outages is a function of entropy
+•
+Tajikistan: some locations outages are managed, some are truly random. shows two cases what people experience. from person's POV: how predictable are the outages in each area? 
+•
+how does this thing changes through moving window. Dunstan: Actually, we can calculate entropy by box and my month. -- OK
+•
+Find an exogenous change? Rainfall data. Make a compelling arguments. Using weather forecasting to plan deployment of teams. Windgust...
+•
+Extremely randomized trees. Mode predicts monitoring hours well. How accurately XGTrees predict? Make tests by type of message / event? Try to run this just on the status on/off?
+•
+Will: What will the final version of the data look like? 
+•
+JP: How do we choose the model? Overall model, not per box.
+◦
+How different is accuracy by type of event?
+◦
+How different is accuracy by region?
+◦
+How different is accuracy by quarter? Oct-Dec Jan-Mar, Apr-Jun. By month?
+◦
+This is needed to use for different types of regions. Also, to inform their decision on what protocol to use. This is just breaking down 86% by region and month. Train model on all the data and test it on the region.

@@ -1,0 +1,31 @@
+Some Notes about L2TJK
+
+Type of messages: 3
+	-power on
+	-power back
+	-power ff
+	-box-status (alive)
+	
+Frequency of messages
+	-power-on (10 seconds)
+	
+	-power off-when power is off
+	
+	-Alive 12 hours
+	
+For  a single box per day (24 hrs)
+-Assume no power-off-8640 power on messages & 2 alive messages
+-Total for 300 boxes per day: 8642 * 300
+
+-When they are power offs:
+	-power off message
+	-power-off monitoring message (same as power on messages) at 1 message per 10 seconds
+	-power back
+	-power on
+	
+	-Assume one power outage:
+		-power-on (
+		-power off message
+		-power-off monitoring message (same as power on messages) at 1 message per 10 seconds
+		-power back
+		-power on
