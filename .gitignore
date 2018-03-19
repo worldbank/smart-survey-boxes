@@ -1,0 +1,11 @@
+#Mac staff 
+*.DS_Store
+
+#Data
+data/*
+
+resources/*
+
+docs/*
+
+
