@@ -2,17 +2,17 @@ import pandas as pd
 import os
 import sys
 
-# A quick and dirty solution to deal with running the script in command line and using task scheduler
-# A quick and dirty solution to deal with running the script in command line and using task scheduler
-user_id = 'WB255520'
-path = None
-if user_id == 'WB454594':
-    path = r'C:\Users\{}\Google-Drive\smart-survey-boxes\code'.format(user_id)
-elif user_id == 'WB255520':
-    path = r'C:\Users\{}\Google-Drive\smart-survey-boxes\code'.format(user_id)
-
-sys.path.append(path)
-from data_processing import data_processing_utils as ut
+# in case the script is being called from commandline or scheduler, we add path to Python path
+package_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
+sys.path.append(package_dir)
+try:
+    from data_processing import data_processing_utils as ut
+    from data_processing import prediction_models as pred
+    import env_setup
+except ImportError:
+    syspath = sys.path
+    if package_dir not in syspath:
+            print('Package directory not correctly added')
 
 
 def generate_powerout_duration_file(observed_valid=None, out_file_valid=None, out_file_invalid=None):

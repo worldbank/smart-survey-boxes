@@ -17,46 +17,16 @@ from sklearn.externals import joblib
 from sklearn.linear_model import LogisticRegression
 import matplotlib.pyplot as plt
 
-# A quick and dirty solution to deal with running the script in command line and using task scheduler
-user_id = 'WB255520'
-path = None
-if user_id == 'WB454594':
-    path = r'C:\Users\{}\Google-Drive\smart-survey-boxes\code'.format(user_id)
-elif user_id == 'WB255520':
-    path = r'C:\Users\{}\Google-Drive\smart-survey-boxes\code'.format(user_id)
-
-sys.path.append(path)
-
-from data_processing import data_processing_utils as ut
-from data_processing import prediction_models as pred
-
-# Environment variables: this will need to be set manually
-ENV_VARS = {'data_folder': None, 'xml_folder': None, 'outputs_folder': None, 'box_dist_ver': 14}
-if sys.platform == 'darwin':
-    ENV_VARS['data_folder'] = os.path.abspath('/Users/dmatekenya/Google-Drive/worldbank/smart-survey-boxes/data')
-    ENV_VARS['xml_folder'] = os.path.abspath("/Users/dmatekenya/Google-Drive/SMSBuckupRestore/")
-    ENV_VARS['outputs_folder'] = os.path.abspath('/Users/dmatekenya/Google-Drive/worldbank/smart-survey-boxes/outputs')
-
-
-if sys.platform == 'win32':
-    if user_id == 'WB454594':
-        # windows-onedrive
-        ENV_VARS['data_folder'] = os.path.join('C:/', 'Users', user_id, 'OneDrive - WBG','Tajikistan\Listening2Tajikistan\01.Eletricity_monitoring','01.data')
-        ENV_VARS['xml_folder'] = os.path.join('C:/', 'Users', user_id, 'Google-Drive', 'SMSBuckupRestore')
-        ENV_VARS['outputs_folder'] = os.path.join('C:/', 'Users', user_id, 'OneDrive - WBG','Tajikistan\Listening2Tajikistan\01.Eletricity_monitoring','outputs_from_dunstan_data_processing')
-    elif user_id == 'WB255520':
-        # windows-onedrive
-        ENV_VARS['data_folder'] = os.path.join('C:/', 'Users', user_id, 'temp')
-        ENV_VARS['xml_folder'] = os.path.join('C:/', 'Users', user_id, 'Google-Drive', 'SMSBuckupRestore')
-        ENV_VARS['outputs_folder'] = os.path.join('C:/', 'Users', user_id, 'temp', 'outputs_from_dunstan_data_processing')
-    else:
-        # windows-onedrive
-        ENV_VARS['data_folder'] = os.path.join('C:/', 'Users', user_id,
-                                               'WBG\William Hutchins Seitz - 01.Eletricity_monitoring', '01.data')
-        ENV_VARS['xml_folder'] = os.path.join('C:/', 'Users', 'wb344850', 'Google-Drive', 'SMSBuckupRestore')
-        ENV_VARS['outputs_folder'] = os.path.join('C:/', 'Users', 'wb344850',
-                                                  'WBG\William Hutchins Seitz - 01.Eletricity_monitoring',
-                                                  'outputs_from_dunstan_data_processing')
+# in case the script is being called from commandline or scheduler, we add path to Python path
+package_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
+sys.path.append(package_dir)
+try:
+    from data_processing import data_processing_utils as ut
+    from data_processing import prediction_models as pred
+except ImportError:
+    syspath = sys.path
+    if package_dir not in syspath:
+            print('Package directory not correctly added')
 
 
 class DataProcessor:
