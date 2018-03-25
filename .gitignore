@@ -3,6 +3,9 @@
 
 #Data
 data/*
+# Keep PSU_coordinates.csv and Distribution_Boxes@14.xlsx
+!data/PSU_coordinates.csv
+!data/Distribution_Boxes@14.xlsx
 
 resources/*
 
