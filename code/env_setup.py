@@ -57,6 +57,7 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
     :param box_ver:
     :return:
     """
+    prj_dir = None
 
     # Check that XML directory is valid and contains sms.xml
     xml_file = os.path.join(xml_folder, 'sms.xml')
@@ -67,9 +68,8 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
     # if project_folder is empty, we use current default directory and notify user
     if not project_folder:
         print('Project folder being set to current directory, please see README.md for details')
-        prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        print(prj_dir)
-
+        prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+       
         # Check for required input files
         check_for_required_files_in_data(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
         check_for_required_files_in_data(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
@@ -87,6 +87,6 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
         check_for_required_files_in_data(proj_folder=project_folder, file_name='PSU_coordinates.csv')
         check_for_required_files_in_data(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')
 
-    env_var = ENV(project_dir=project_folder, xml_source_dir=xml_folder, box_dist_ver=box_ver)
+    env_var = ENV(project_dir=prj_dir, xml_source_dir=xml_folder, box_dist_ver=box_ver)
 
     return env_var
