@@ -67,7 +67,8 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
     # if project_folder is empty, we use current default directory and notify user
     if not project_folder:
         print('Project folder being set to current directory, please see README.md for details')
-        prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        print(prj_dir)
 
         # Check for required input files
         check_for_required_files_in_data(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
