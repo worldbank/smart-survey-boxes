@@ -2,35 +2,28 @@
 Sets up the environment first time
 """
 import os
-import pickle
+import sys
 import collections
 import shutil
 
 
 ENV = collections.namedtuple('ENV', 'project_dir xml_source_dir box_dist_ver')
 
+# ==================================================
+# EDIT THE FOLLOWING LINES TO CHANGE FOLDER LOCATION
+# ==================================================
 
-def get_env_variables():
-    curr_dir = os.path.dirname(os.path.abspath(__file__))
-    env_object_supposed_path = os.path.join(curr_dir, 'env_vars.pkl')
+# if you have a separate project folder, please replace None with 'path/to/your/project_folder'
+PROJECT_DIR = None
 
-    if os.path.exists(env_object_supposed_path):
-        with open(env_object_supposed_path, 'rb') as input_obj:
-            env_vars = pickle.load(input_obj)
+# this cant be left blank, please put path to xml folder
+XML_DIR = None
 
-            # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
-            check_for_required_files_in_data(proj_folder=env_vars.project_dir, file_name='PSU_coordinates.csv')
-            check_for_required_files_in_data(proj_folder=env_vars.project_dir, file_name='Distribution_Boxes@14.xlsx')
-
-    else:
-        env_vars = get_directories_from_user()
-        with open(env_object_supposed_path, 'wb') as output:  # Overwrites any existing file.
-                pickle.dump(env_vars, output, pickle.HIGHEST_PROTOCOL)
-
-    return env_vars
+# this is the version for box details file. currently using 14
+BOX_DIST_VER = 14
 
 
-def create_dir_safely(dir_name):
+def create_dir(dir_name):
     """
 
     :param dir_name:
@@ -56,36 +49,47 @@ def check_for_required_files_in_data(proj_folder=None, file_name=None):
             print('Please note that this file may not be the latest, check with William for the latest file.')
 
 
-def get_directories_from_user():
+def set_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BOX_DIST_VER):
     """
-    If those variables are None, ask user to prpvide them
+    Get and set environment variables
+    :param project_folder:
+    :param xml_folder:
+    :param box_ver:
     :return:
     """
-    proj_folder = input("Provide full path of project folder: ")
-    xml_folder = input("Provide full path for SMSBuckStore where sms.xml is located...: ")
 
-    # Check that the path for xml is correct
-    if not os.path.exists(xml_folder):
-        print('Provide correct path..... please check the following:')
-        print('1. Path is not enclosed in quotes')
-        print('2. You have a directory where you are keeping the xml files')
+    # Check that XML directory is valid and contains sms.xml
+    xml_file = os.path.join(xml_folder, 'sms.xml')
+    if not os.path.exists(xml_file):
+        print("Please provide valid path for xml at the TOP OF THIS FILE")
+        sys.exit()
 
-    # Create required project folders
-    folders_to_create = [proj_folder, proj_folder + '/data/processed-sms', proj_folder + '/data/raw-sms-backup',
-                         proj_folder + '/data/imputation-verification', proj_folder + 'outputs']
+    # if project_folder is empty, we use current default directory and notify user
+    if not project_folder:
+        print('Project folder being set to current directory, please see README.md for details')
+        prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-    for f in folders_to_create:
-        create_dir_safely(f)
+        # Check for required input files
+        check_for_required_files_in_data(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
+        check_for_required_files_in_data(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
 
-    # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
-    check_for_required_files_in_data(proj_folder=proj_folder, file_name='PSU_coordinates.csv')
-    check_for_required_files_in_data(proj_folder=proj_folder, file_name='Distribution_Boxes@14.xlsx')
+    if project_folder:
+        # Create required project subfolders
+        folders_to_create = [project_folder, project_folder + '/data/processed-sms',
+                             project_folder + '/data/raw-sms-backup',
+                             project_folder + '/data/imputation-verification', project_folder + 'outputs']
 
-    out_vars = ENV(project_dir=proj_folder, xml_source_dir=xml_folder, box_dist_ver=14)
+        for f in folders_to_create:
+            create_dir(f)
 
-    return out_vars
+        # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
+        check_for_required_files_in_data(proj_folder=project_folder, file_name='PSU_coordinates.csv')
+        check_for_required_files_in_data(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')
+
+    env_var = ENV(project_dir=project_folder, xml_source_dir=xml_folder, box_dist_ver=box_ver)
+
+    return env_var
 
 
 if __name__ == '__main__':
-    evars = get_env_variables()
-    print(evars)
+    set_env_variables()
