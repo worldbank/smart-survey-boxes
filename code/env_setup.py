@@ -49,7 +49,7 @@ def check_for_required_files_in_data(proj_folder=None, file_name=None):
             print('Please note that this file may not be the latest, check with William for the latest file.')
 
 
-def set_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BOX_DIST_VER):
+def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BOX_DIST_VER):
     """
     Get and set environment variables
     :param project_folder:
@@ -89,7 +89,3 @@ def set_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
     env_var = ENV(project_dir=project_folder, xml_source_dir=xml_folder, box_dist_ver=box_ver)
 
     return env_var
-
-
-if __name__ == '__main__':
-    set_env_variables()
