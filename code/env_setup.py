@@ -36,7 +36,17 @@ def create_dir(dir_name):
             print('Please make sure the path for project folder is specified correctly...')
 
 
-def check_for_required_files_in_data(proj_folder=None, file_name=None):
+def create_project_subfolders(project_folder=None):
+    # Create required project subfolders
+    folders_to_create = [project_folder, project_folder + '/data/processed-sms',
+                         project_folder + '/data/raw-sms-backup',
+                         project_folder + '/data/imputation-verification', project_folder + 'outputs']
+
+    for f in folders_to_create:
+        create_dir(f)
+
+
+def check_for_required_folders_and_files(proj_folder=None, file_name=None):
     # Check if data folder has required input files
     repo_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
     user_data_dir = os.path.abspath(proj_folder + '/data/')
@@ -69,23 +79,17 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
     if not project_folder:
         print('Project folder being set to current directory, please see README.md for details')
         prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        create_project_subfolders(project_folder=prj_dir)
        
         # Check for required input files
-        check_for_required_files_in_data(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
-        check_for_required_files_in_data(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
+        check_for_required_folders_and_files(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
+        check_for_required_folders_and_files(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
 
     if project_folder:
-        # Create required project subfolders
-        folders_to_create = [project_folder, project_folder + '/data/processed-sms',
-                             project_folder + '/data/raw-sms-backup',
-                             project_folder + '/data/imputation-verification', project_folder + 'outputs']
-
-        for f in folders_to_create:
-            create_dir(f)
-
+        create_project_subfolders(project_folder=project_folder)
         # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
-        check_for_required_files_in_data(proj_folder=project_folder, file_name='PSU_coordinates.csv')
-        check_for_required_files_in_data(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')
+        check_for_required_folders_and_files(proj_folder=project_folder, file_name='PSU_coordinates.csv')
+        check_for_required_folders_and_files(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')
 
     env_var = ENV(project_dir=prj_dir, xml_source_dir=xml_folder, box_dist_ver=box_ver)
 
