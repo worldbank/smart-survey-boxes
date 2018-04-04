@@ -14,9 +14,11 @@ ENV = collections.namedtuple('ENV', 'project_dir xml_source_dir box_dist_ver')
 # ==================================================
 
 # if you have a separate project folder, please replace None with 'path/to/your/project_folder'
+# for windows users add r at the beginning of path string like this: r'path/to/your/project_folder'
 PROJECT_DIR = None
 
 # this cant be left blank, please put path to xml folder
+# for windows users add r' at the beginning of path string like this: r'path/xml'
 XML_DIR = None
 
 # this is the version for box details file. currently using 14
@@ -40,7 +42,7 @@ def create_project_subfolders(project_folder=None):
     # Create required project subfolders
     folders_to_create = [project_folder, project_folder + '/data/processed-sms',
                          project_folder + '/data/raw-sms-backup',
-                         project_folder + '/data/imputation-verification', project_folder + 'outputs']
+                         project_folder + '/data/imputation-verification', project_folder + '/outputs']
 
     for f in folders_to_create:
         create_dir(f)
