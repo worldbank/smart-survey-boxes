@@ -13,20 +13,21 @@ ENV = collections.namedtuple('ENV', 'project_dir data_dir_name xml_source_dir bo
 # EDIT THE FOLLOWING LINES TO CHANGE FOLDER LOCATION
 # ==================================================
 
-# if you have a separate project folder, please replace None with 'path/to/your/project_folder'
+# if you have a separate project folder, please replace None with 'path/to/your/project_folder'.
 # for windows users add r at the beginning of path string like this: r'path/to/your/project_folder'
 PROJECT_DIR = None
 
-# if for some reason you want to direct data to an existing data folder somewhere in an existing
-# project folder provided above, please provide name of that directory (only the data folder name, not full path)
+# if for some reason you want to direct data to an existing data folder somewhere in an existing project folder
+# provided above, please provide name of that directory (only the data folder name, not full path)
 # in quotes. e.g. '01.data'
 DATA_DIR = None
 
-# this cant be left blank, please put path to xml folder
+# this XML_DIR variable this cant be None, please put full path to xml folder.
 # for windows users add r' at the beginning of path string like this: r'path/xml'
 XML_DIR = None
 
-# this is the version for box details file. currently using 14
+# this is the version for box details file. currently using 14.
+# Please refer to README.md for full documentation on this.
 BOX_DIST_VER = 14
 
 

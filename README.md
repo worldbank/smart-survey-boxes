@@ -25,9 +25,12 @@ Below is an overview of the project files and their descriptions. This is a samp
     |- README           # This readme
     |- data/        	# Not shown here but thid folder contains all the data
     |- code/        	# Contains all the python and STATA code
+        |- analysis_scripts/  # miscellenous analysis scripts
+        |- data_processing/   # data processing scripts
+        |- map-app/         # interactive mapping app for out of sample predictions
     |- docs/        	# Project documents and other resources
-    |- map-app/         # interactive mapping app for out of sample predicted variables
-    |- venv/            # Required Pythin environment to run the code
+    
+    |- venv/            # Required Python environment to run the code
     |- outputs/         # Outputs from analysis
     
    
@@ -38,12 +41,13 @@ Installation and Setup
 
 This repository is based on Python 3. If you don't have Python, the fastest and easiest  way to install Python and the required packages is through [Anaconda](https://www.anaconda.com/what-is-anaconda/). For those working on WBG windows computers, please install Anaconda through e-services, once installed take note of the path for the Python interpreter. Anaconda will come with all the libraries which have been used in this project.
 
-**Download Repository**
+**Download the Repository**
 
 Download or clone this repository to your computer. This repository is still private, so you need to sign up for World Bank GitHub account in order to be able to access this repo on GitHub.com.   Once downloaded, unzip the file if necessary.
 
-**Edit env_setup.py**
-The package requires three main environment settings as below. Please edit these
+**Environment Setup**
+
+The package requires three main environment settings as described here. First, navigate to the *code* directory. While there, open *env_setup.py* in any text editor and edit the variables described below:
 - **source of xml data:** Currently, the sms data is being held on Google Drive. If you have access to this shared folder, take note of its full path. In the Python file *env_setup.py*, at the top of the file, edit value for the variable XML_DIR.
 - **Project folder:** The desired folder structure should the same the one  for this repository. Therefore, its recommended that you keep this repo folder as your project folder. However, you can choose another existing/new project folder. This is the folder where all the data outputs will be saved.If you don't provide a separate project folder, the repository folder will be used as the project folder. In the Python file *env_setup.py*, at the top of the file, edit value for the variable PROJECT_DIR by providing full path to your desired project folder.
 - **Box Distribution version:** The location of each box and other details are saved in a file with name like this one *Distribution_Boxes@14.xlsx* where the 2 digits at the end indicates the version of the file. You need to provide that version here. For now, the version is 14.In the Python file *env_setup.py*, at the top of the file, edit value for the variable BOX_DIST_VER.
