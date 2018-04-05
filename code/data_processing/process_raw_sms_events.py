@@ -21,7 +21,7 @@ except ImportError:
 def main(save_raw_events=False):
     # grab environment variables (data folders etc) from dp
     env_vars = su.get_env_variables()
-    data_folder = os.path.join(os.path.abspath(env_vars.project_dir), 'data')
+    data_folder = os.path.join(os.path.abspath(env_vars.project_dir), env_vars.data_dir_name)
     xml_folder = os.path.abspath(env_vars.xml_source_dir)
     outputs = os.path.join(os.path.abspath(env_vars.project_dir), 'outputs')
 

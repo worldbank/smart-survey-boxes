@@ -57,7 +57,7 @@ def generate_powerout_duration_file(observed_valid=None, out_file_valid=None, ou
 def main():
     # set up environment
     env_vars = su.get_env_variables()
-    data_folder = os.path.join(os.path.abspath(env_vars.project_dir), 'data')
+    data_folder = os.path.join(os.path.abspath(env_vars.project_dir), env_vars.data_dir_name)
     
     sms_observed = os.path.join(data_folder, 'processed-sms', 'sms_observed_valid.csv')
 
