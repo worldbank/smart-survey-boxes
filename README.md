@@ -22,16 +22,15 @@ Folder Structure for the Project
 Below is an overview of the project files and their descriptions. This is a sample structure.
 
     smart-survey-boxes
-    |- README           # This readme
-    |- data/        	# Not shown here but thid folder contains all the data
-    |- code/        	# Contains all the python and STATA code
-        |- analysis_scripts/  # miscellenous analysis scripts
-        |- data_processing/   # data processing scripts
-        |- map-app/         # interactive mapping app for out of sample predictions
-    |- docs/        	# Project documents and other resources
-    
-    |- venv/            # Required Python environment to run the code
-    |- outputs/         # Outputs from analysis
+    |- README                   # This readme
+    |- data/        	        # Not shown here but thid folder contains all the data
+    |- code/        	        # Contains all the python and STATA code
+        |- analysis_scripts/    # miscellenous analysis scripts
+        |- data_processing/     # data processing scripts
+        |- map-app/             # interactive mapping app for out of sample predictions
+    |- docs/        	        # Project documents and other resources
+    |- venv/                    # Required Python environment to run the code
+    |- outputs/                 # Outputs from analysis
     
    
 Installation and Setup
