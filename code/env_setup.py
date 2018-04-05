@@ -17,8 +17,9 @@ ENV = collections.namedtuple('ENV', 'project_dir xml_source_dir box_dist_ver')
 # for windows users add r at the beginning of path string like this: r'path/to/your/project_folder'
 PROJECT_DIR = None
 
-# if for some reason you want to direct data to an existing data folder, somewhere in an existing
-# project folder provided please provide name of that directory
+# if for some reason you want to direct data to an existing data folder somewhere in an existing
+# project folder provided above, please provide name of that directory (only the data folder name, not full path)
+# in quotes. e.g. '01.data'
 DATA_DIR = None
 
 # this cant be left blank, please put path to xml folder
@@ -61,7 +62,11 @@ def create_project_subfolders(project_folder=None, custom_data_dir=False):
 def check_for_required_folders_and_files(proj_folder=None, file_name=None):
     # Check if data folder has required input files
     repo_data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
     user_data_dir = os.path.abspath(proj_folder + '/data/')
+    if DATA_DIR:
+        user_data_dir = os.path.abspath(proj_folder + '/{}/'.format(DATA_DIR))
+
     req_file_path = os.path.join(user_data_dir, file_name)
     if not os.path.exists(req_file_path):
         print('Copying {} from {} to {}'.format(file_name, repo_data_dir, user_data_dir))
