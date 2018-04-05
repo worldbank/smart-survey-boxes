@@ -17,6 +17,10 @@ ENV = collections.namedtuple('ENV', 'project_dir xml_source_dir box_dist_ver')
 # for windows users add r at the beginning of path string like this: r'path/to/your/project_folder'
 PROJECT_DIR = None
 
+# if for some reason you want to direct data to an existing data folder, somewhere in an existing
+# project folder provided please provide name of that directory
+DATA_DIR = None
+
 # this cant be left blank, please put path to xml folder
 # for windows users add r' at the beginning of path string like this: r'path/xml'
 XML_DIR = None
@@ -38,11 +42,17 @@ def create_dir(dir_name):
             print('Please make sure the path for project folder is specified correctly...')
 
 
-def create_project_subfolders(project_folder=None):
+def create_project_subfolders(project_folder=None, custom_data_dir=False):
+
     # Create required project subfolders
-    folders_to_create = [project_folder, project_folder + '/data/processed-sms',
-                         project_folder + '/data/raw-sms-backup',
-                         project_folder + '/data/imputation-verification', project_folder + '/outputs']
+    data_folder = 'data'
+    if custom_data_dir:
+        data_folder = DATA_DIR
+
+    folders_to_create = [project_folder, project_folder + '/{}/processed-sms'.format(data_folder),
+                         project_folder + '/{}/raw-sms-backup'.format(data_folder),
+                         project_folder + '/{}/imputation-verification'.format(data_folder),
+                         project_folder + '/outputs']
 
     for f in folders_to_create:
         create_dir(f)
@@ -88,7 +98,11 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
         check_for_required_folders_and_files(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
 
     if project_folder:
-        create_project_subfolders(project_folder=project_folder)
+        custom_data_folder = False
+        if DATA_DIR:
+            custom_data_folder = True
+
+        create_project_subfolders(project_folder=project_folder, custom_data_dir=custom_data_folder)
         # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
         check_for_required_folders_and_files(proj_folder=project_folder, file_name='PSU_coordinates.csv')
         check_for_required_folders_and_files(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')

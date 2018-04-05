@@ -3,7 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="4738ae77-9e12-4c0b-a16e-cad1860722b7" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
-      <change beforePath="$PROJECT_DIR$/code/data_processing/process_tableau_files.py" afterPath="$PROJECT_DIR$/code/data_processing/process_tableau_files.py" />
+      <change beforePath="$PROJECT_DIR$/code/env_setup.py" afterPath="$PROJECT_DIR$/code/env_setup.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -26,13 +26,14 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="env_setup.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="env_setup.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/code/env_setup.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="408">
-              <caret line="24" column="12" lean-forward="false" selection-start-line="24" selection-start-column="0" selection-end-line="24" selection-end-column="12" />
+            <state relative-caret-position="144">
+              <caret line="70" column="132" lean-forward="true" selection-start-line="70" selection-start-column="132" selection-end-line="70" selection-end-column="132" />
               <folding>
                 <element signature="e#43#52#0" expanded="true" />
+                <element signature="e#2714#4347#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -42,8 +43,8 @@
         <entry file="file://$PROJECT_DIR$/README.md">
           <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
             <state split_layout="SPLIT">
-              <first_editor relative-caret-position="660">
-                <caret line="74" column="6" lean-forward="false" selection-start-line="74" selection-start-column="6" selection-end-line="74" selection-end-column="6" />
+              <first_editor relative-caret-position="409">
+                <caret line="32" column="48" lean-forward="true" selection-start-line="32" selection-start-column="48" selection-end-line="32" selection-end-column="48" />
                 <folding />
               </first_editor>
               <second_editor />
@@ -69,10 +70,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="process_tableau_files.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="process_tableau_files.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/code/data_processing/process_tableau_files.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="595">
+            <state relative-caret-position="299">
               <caret line="35" column="54" lean-forward="true" selection-start-line="35" selection-start-column="54" selection-end-line="35" selection-end-column="54" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
@@ -180,9 +181,9 @@
         <option value="$PROJECT_DIR$/code/data_processing/impute.py" />
         <option value="$PROJECT_DIR$/code/data_processing/process_raw_sms_events.py" />
         <option value="$PROJECT_DIR$/code/data_processing/daily_data_backup.py" />
-        <option value="$PROJECT_DIR$/code/env_setup.py" />
-        <option value="$PROJECT_DIR$/README.md" />
         <option value="$PROJECT_DIR$/code/data_processing/process_tableau_files.py" />
+        <option value="$PROJECT_DIR$/README.md" />
+        <option value="$PROJECT_DIR$/code/env_setup.py" />
       </list>
     </option>
   </component>
@@ -754,17 +755,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="SPLIT">
-          <first_editor relative-caret-position="660">
-            <caret line="74" column="6" lean-forward="false" selection-start-line="74" selection-start-column="6" selection-end-line="74" selection-end-column="6" />
-            <folding />
-          </first_editor>
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/code/data_processing/daily_data_backup.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
@@ -775,23 +765,35 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/code/env_setup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="408">
-          <caret line="24" column="12" lean-forward="false" selection-start-line="24" selection-start-column="0" selection-end-line="24" selection-end-column="12" />
-          <folding>
-            <element signature="e#43#52#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/code/data_processing/process_tableau_files.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="595">
+        <state relative-caret-position="299">
           <caret line="35" column="54" lean-forward="true" selection-start-line="35" selection-start-column="54" selection-end-line="35" selection-end-column="54" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
             <element signature="e#2046#2581#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="409">
+            <caret line="32" column="48" lean-forward="true" selection-start-line="32" selection-start-column="48" selection-end-line="32" selection-end-column="48" />
+            <folding />
+          </first_editor>
+          <second_editor />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/code/env_setup.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="144">
+          <caret line="70" column="132" lean-forward="true" selection-start-line="70" selection-start-column="132" selection-end-line="70" selection-end-column="132" />
+          <folding>
+            <element signature="e#43#52#0" expanded="true" />
+            <element signature="e#2714#4347#0" expanded="true" />
           </folding>
         </state>
       </provider>

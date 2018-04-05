@@ -19,7 +19,7 @@ devices. The system has three main components as follows:
 
 Folder Structure for the Project
 ============================================
-Here is an overview of the project files and their descriptions. This is a sample structure.
+Below is an overview of the project files and their descriptions. This is a sample structure.
 
     smart-survey-boxes
     |- README           # This readme
@@ -52,7 +52,7 @@ Running the Code
 ============================================
 
 #### Which scripts to run?
-hey are four python scripts which can/should be run in this older:
+They are four python scripts which can/should be run in this older:
    
 1. **code/data_processing/daily_data_backup.py:**  this is meant to convert raw sms.xml to csv. The output from this script is a csv file which will be saved in *./data/raw-sms-backup/* with name of that day's date.
 2. **code/data_processing/process_raw_sms_events.py:** this script will output three files into the folder *./data/processed-sms/*. The files are *sms_observed_valid.csv*, *sms_observed.csv* and *sms_rect_hr.csv* For details of contents of these file, please refer to the documentation on data processing.
