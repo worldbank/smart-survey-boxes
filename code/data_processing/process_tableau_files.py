@@ -3,12 +3,12 @@ import os
 import sys
 
 # in case the script is being called from commandline or scheduler, we add path to Python path
-package_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
+package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(package_dir)
 try:
     from data_processing import data_processing_utils as ut
     from data_processing import prediction_models as pred
-    import env_setup
+    import env_setup as su
 except ImportError:
     syspath = sys.path
     if package_dir not in syspath:
@@ -56,15 +56,9 @@ def generate_powerout_duration_file(observed_valid=None, out_file_valid=None, ou
 
 def main():
     # set up environment
-    data_folder = None
-    if sys.platform == 'darwin':
-        data_folder = os.path.abspath('/Users/dmatekenya/Google-Drive/worldbank/smart-survey-boxes/data')
-
-    if sys.platform == 'win32':
-        # windows-onedrive
-        data_folder = os.path.join('C:/', 'Users', 'wb344850', 'WBG\William Hutchins Seitz - 01.Eletricity_monitoring',
-                                   '01.data')
-
+    env_vars = su.get_env_variables()
+    data_folder = os.path.join(os.path.abspath(env_vars.project_dir), 'data')
+    
     sms_observed = os.path.join(data_folder, 'processed-sms', 'sms_observed_valid.csv')
 
     out_valid = os.path.join(data_folder, 'processed-sms', 'powerout_duration.csv')
