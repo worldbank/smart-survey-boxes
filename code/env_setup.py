@@ -7,7 +7,7 @@ import collections
 import shutil
 
 
-ENV = collections.namedtuple('ENV', 'project_dir xml_source_dir box_dist_ver')
+ENV = collections.namedtuple('ENV', 'project_dir data_dir_name xml_source_dir box_dist_ver')
 
 # ==================================================
 # EDIT THE FOLLOWING LINES TO CHANGE FOLDER LOCATION
@@ -101,17 +101,21 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
         # Check for required input files
         check_for_required_folders_and_files(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
         check_for_required_folders_and_files(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
-        env_var = ENV(project_dir=prj_dir, xml_source_dir=xml_folder, box_dist_ver=box_ver)
+        env_var = ENV(project_dir=prj_dir, data_dir_name='data', xml_source_dir=xml_folder, box_dist_ver=box_ver)
 
     if project_folder:
         custom_data_folder = False
+        data_folder_name = 'data'
         if DATA_DIR:
             custom_data_folder = True
+            data_folder_name = DATA_DIR
 
         create_project_subfolders(project_folder=project_folder, custom_data_dir=custom_data_folder)
         # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
         check_for_required_folders_and_files(proj_folder=project_folder, file_name='PSU_coordinates.csv')
         check_for_required_folders_and_files(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')
-        env_var = ENV(project_dir=project_folder, xml_source_dir=xml_folder, box_dist_ver=box_ver)
+
+        env_var = ENV(project_dir=project_folder, data_dir_name=data_folder_name, xml_source_dir=xml_folder,
+                      box_dist_ver=box_ver)
 
     return env_var
