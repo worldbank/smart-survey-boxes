@@ -84,7 +84,7 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
     :param box_ver:
     :return:
     """
-    prj_dir = None
+    env_var = None
 
     # Check that XML directory is valid and contains sms.xml
     xml_file = os.path.join(xml_folder, 'sms.xml')
@@ -101,6 +101,7 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
         # Check for required input files
         check_for_required_folders_and_files(proj_folder=prj_dir, file_name='PSU_coordinates.csv')
         check_for_required_folders_and_files(proj_folder=prj_dir, file_name='Distribution_Boxes@14.xlsx')
+        env_var = ENV(project_dir=prj_dir, xml_source_dir=xml_folder, box_dist_ver=box_ver)
 
     if project_folder:
         custom_data_folder = False
@@ -111,7 +112,6 @@ def get_env_variables(project_folder=PROJECT_DIR, xml_folder=XML_DIR, box_ver=BO
         # Ensure that data folder has PSU_coordinates.csv and Distribution_Boxes@14.xlsx
         check_for_required_folders_and_files(proj_folder=project_folder, file_name='PSU_coordinates.csv')
         check_for_required_folders_and_files(proj_folder=project_folder, file_name='Distribution_Boxes@14.xlsx')
-
-    env_var = ENV(project_dir=prj_dir, xml_source_dir=xml_folder, box_dist_ver=box_ver)
+        env_var = ENV(project_dir=project_folder, xml_source_dir=xml_folder, box_dist_ver=box_ver)
 
     return env_var

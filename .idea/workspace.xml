@@ -28,11 +28,10 @@
       <file leaf-file-name="env_setup.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/code/env_setup.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="430">
-              <caret line="26" column="34" lean-forward="true" selection-start-line="26" selection-start-column="34" selection-end-line="26" selection-end-column="34" />
+            <state relative-caret-position="697">
+              <caret line="78" column="92" lean-forward="false" selection-start-line="78" selection-start-column="92" selection-end-line="78" selection-end-column="92" />
               <folding>
                 <element signature="e#43#52#0" expanded="true" />
-                <element signature="e#1984#2789#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -782,11 +781,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/code/env_setup.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="430">
-          <caret line="26" column="34" lean-forward="true" selection-start-line="26" selection-start-column="34" selection-end-line="26" selection-end-column="34" />
+        <state relative-caret-position="697">
+          <caret line="78" column="92" lean-forward="false" selection-start-line="78" selection-start-column="92" selection-end-line="78" selection-end-column="92" />
           <folding>
             <element signature="e#43#52#0" expanded="true" />
-            <element signature="e#1984#2789#0" expanded="true" />
           </folding>
         </state>
       </provider>
