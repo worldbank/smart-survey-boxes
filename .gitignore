@@ -10,5 +10,6 @@ data/*
 resources/*
 
 docs/*
+!docs/data_processing_workflow.docx
 
 
