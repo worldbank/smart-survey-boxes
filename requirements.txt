@@ -84,7 +84,7 @@ TPOT==0.8.3
 tqdm==4.15.0
 traitlets==4.3.2
 update-checker==0.16
-urllib3==1.22
+urllib3==1.26.5
 virtualenv==15.1.0
 wcwidth==0.1.7
 webencodings==0.5.1
