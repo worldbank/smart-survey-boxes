@@ -48,7 +48,7 @@ pandas==0.20.3
 pandocfilters==1.4.2
 pexpect==4.2.1
 pickleshare==0.7.4
-Pillow==4.3.0
+Pillow==8.2.0
 prep==0.1.10
 prettytable==0.7.2
 prompt-toolkit==1.0.15
