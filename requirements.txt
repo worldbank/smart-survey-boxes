@@ -52,7 +52,7 @@ Pillow==4.3.0
 prep==0.1.10
 prettytable==0.7.2
 prompt-toolkit==1.0.15
-protobuf==3.5.0.post1
+protobuf==3.15.0
 ptyprocess==0.5.2
 Pygments==2.2.0
 pyparsing==2.2.0
